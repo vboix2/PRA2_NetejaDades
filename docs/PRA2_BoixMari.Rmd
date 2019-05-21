@@ -15,21 +15,27 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # 1. Descripció del dataset
 
-El dataset utilitzat en aquesta pràctica s'ha obtingut de la pàgina web de *Kaggle*  ([https://www.kaggle.com/c/titanic]) i conté les dades d'alguns dels passatgers del Titanic durant el desastre del 1912. Les dades estan formades per dos fitxers CSV, amb un registre per a cada passatger del vaixell que conté informació personal i relativa al viatge. El fitxer *train.csv* té 891 registres i 12 atributs, i el fitxer *test.csv* 418 registres i 11 atributs. Tots dos fitxers tenen els següents atributs:
+El dataset utilitzat en aquesta pràctica s'ha obtingut de la pàgina web de *Kaggle*  (https://www.kaggle.com/c/titanic) i conté les dades dels passatgers del Titanic durant el desastre del 1912. L'objectiu d'aquest conjunt de dades és realitzar una predicció sobre la supervivència d'alguns passatgers a partir de les seves característiques. Per tant, es tracta d'una tasca de classificació on cal construir un model supervisat capaç de determinar el valor de l'atribut *Survived* (variable objectiu o dependent) a partir de la resta d'atributs (variables independents). 
+
+Les conjunt de dades està format per dos fitxers CSV:
+
+* *Titanic_train.csv*. Conjunt d'entrenament que servirà per entrenar el model, per tant, conté l'atribut objectiu o classe *Survived*. Està format per 891 registres i 12 atributs.
+* *Titanic_test.csv*. Conjunt de prova, conté els registres sobre els que cal realitzar la predicció. Està format per 418 registres i 11 atributs.
+
+La informació que contenen els atributs és la següent:
 
 * *PassengerId*. Identificador únic del viatger al dataset (nombre enter).
-* *Survived*. Atribut que indica si el passatger va sobreviure a la catàstrofe (1: va sobreviure, 0: va morir).
-* * Pclass*. Indica la classe en què viatjava el passatger (1: primera classe, 2: segona classe, 3: tercera classe).
+* *Survived*. Atribut que indica si el passatger va sobreviure a la catàstrofe (1: va sobreviure, 0: va morir). Només disponible al conjunt *train*.
+* *Pclass*. Indica la classe en què viatjava el passatger (1: primera classe, 2: segona classe, 3: tercera classe).
 * *Name*. Nom complet del viatger (cadena de text).
 * *Sex*. Sexe del viatger (male: home, female: dona).
 * *Age*. Edat del viatger en anys (nombre real).
-* *SibSp*. Nombre de germans, germanes o esposes a bord del vaixell (nombre enter).
+* *SibSp*. Nombre de germans, germanes o marit/muller a bord del vaixell (nombre enter).
 * *Parch*. Nombre de pares o fills a bord del vaixell (nombre enter).
 * *Ticket*. Nombre del tiquet (cadena de text).
 * *Fare*. Import pagat pel bitllet (nombre real).
 * *Cabin*. Cabina on s'allotjava el passatger (cadena de text).
 * *Embarked*. Port d'embarcament del viatger (C: Cherbourg, Q: Queenstown, S: Southampton).
-
 
 # 2. Integració i selecció de les dades
 
