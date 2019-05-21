@@ -1,0 +1,90 @@
+---
+title: "jmariaguirre-PAC3"
+author: "Jesus Mari Aguirre"
+date: "1/11/2017"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Pregunta 2.  
+En aquest exercici aneu a seguir els passos del cicle de vida d'un projecte de mineria de dades pel cas d'un algorisme de classificaci?? i m??s concretament un arbre de decisi??. Ho fareu amb el fitxer titanic.csv. Que trobareu a la wiki. Aquest fitxer cont?? un registre per cada passatger que viatjava en el Tit??nic. En les variables es caracteritza si era home o  dona, adult o nen, en quina categoria viatjava o si era membre de la tripulaci??.
+
+### Estudieu les dades.
+per exemple: N??mero de registres dels fitxer? Distribucions de valors per variables? Hi ha camps mal informats o buits?
+
+Importaci?? de l'arxiu, pr??viament s'ha inspeccionat amb l'editor de text, es tracta d'un arxiu csv separat per $, cont?? les cap??aleres i no pareix que tingui camps NA.
+L'arxiu cont?? 2201 observacions
+
+```{r}
+passatgers<-read.csv("/Users/jmari/Dropbox/Master Ciencia de les dades/mineria de dades/PAC3/titanic.csv",header=TRUE,na.strings = "NA")
+```
+Examinem el contingut, totes les columnes s??n categ??riques, s??n completes i els valors que prenen s??n raonables.
+```{r}
+str(passatgers)
+```
+
+Examinem el sumari, a on podem veure que no hi ha cap columna amb valors NA i les categories.
+
+```{r}
+summary(passatgers)
+```
+
+### Prepareu les dades. 
+En aquest cas ja estan en el format correcte i no cal discretitzar ni generar atributs nous. Cal triar quines s??n les variables que s'utilitzaran per construir el model i quina ??s la variable que classifica. En aquest cas la variable per la que classificarem ??s el camp de si  el passatger va sobreviure o no.
+
+Per a poder dur a terme aquest apartat, primer de tot instal??lam el paquet C50 i inclourem la libreria C50 a la sessi?? fent:
+```{r}
+#install.packages("C50")
+#install.packages("gmodels")
+library(C50)
+library(gmodels)
+```
+
+Partint d'aquest conjunt de dades crearem dos subconjunts, un per a la creaci?? del model i altre per test?? aquest model:
+```{r}
+indexes = sample(2201,1000)
+passatgers.train = passatgers[indexes,]
+passatgers.test = passatgers[-indexes,]
+```
+### Creaci?? del model
+Per a crear el model, triem les columnes CLASS, AGE i SEX, i classifiquem per SURVIVED. crearem dues matrius, trainX i trainY per passar-les com argument a la funci?? C50::C5.0
+
+```{r}
+trainX <-passatgers.train[,c("CLASS","AGE","SEX")]
+trainY <-passatgers.train[,c("SURVIVED")]
+passatgers.model <- C50::C5.0( trainX, trainY )
+summary( passatgers.model )
+```
+L'error global del model que ??s del 22,2% (resultat donat al summary anterior).
+
+```{r}
+plot(passatgers.model) 
+```
+
+Les regles serien:
+
+SEX = Home => Mor
+SEX = Dona & CLASS pertany[1a,2a,crew] => Sobreviu
+SEX = Dona & CLASS = 3aa => Mor
+
+Es va provar de generar un model fent trials=10 i veure si obten??em un resultat millor. Es va obtenir subconjunt amb un error menor, per?? amb les mateixes regles.
+
+```{r, eval=FALSE}
+passatgers.model <- C50::C5.0( trainX, trainY, trials=10 )
+summary( passatgers.model )
+```
+### Avaluaci?? del model
+Provarem de fer la predicci?? amb el model obtingut, damunt del subconjunt de test.
+
+```{r}
+passatgers.predict <- predict.C5.0(passatgers.model, passatgers.test) 
+CrossTable(passatgers.predict,passatgers.test$SURVIVED)
+```
+
+Comparant els subconjunts podem veure que dels passatgers testats que no van sobreviure s'han encertat un 80% de les prediccions. Dels que s?? que van sobreviure s'han encertat un 75%. De 1201 mostres tenim 952 encertos i 249 errats. En total tenim un 80% d'encerts.
+

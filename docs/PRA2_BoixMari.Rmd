@@ -41,10 +41,36 @@ test <- read.csv('../data/Titanic_test.csv')
 
 
 # 3. Neteja de les dades
+Començem examinant el dataframe i el tipus de les seves columnes amb la funció str(), podem veure que el tipus de la columna "survived" es enter, el convertirem a Factor, el mateix passa amb la columna Pclass. 
+
+```{r}
+"examinem el datafram i convertim a factor les columnes Survived i Pclass"
+str(train)
+str(test)
+```
+```{r}
+train[,'Survived']<-factor(train[,'Survived'])
+train[,'Pclass']<-factor(train[,'Pclass'])
+test[,'Pclass']<-factor(test[,'Pclass'])
+str(train)
+```
+Al convertir a factor podem veure que les columnes "Survived" i "Pclass" no contenen cap valor nul. Les columnes que contenen valors nuls o buits són "Cabin", "Embarked", "Age" (NA)       
 
 ## 3.1. Elements buits
+Examinarem els elements buids a les columnes dels dataframes "Train" i "test". Podem veure que tenim molts de valors NA a la columna "Age" i un a la columna "Fare"del conjunt de test.
+```{r}
+sapply(train, function(x) sum(is.na(x)))
+sapply(test, function(x) sum(is.na(x)))
+```
 
 ## 3.2. Valors extrems
+Examinem els valors extrems amb els boxplot.stats(columna)$out
+```{r}
+boxplot.stats(train$Age)$out
+boxplot.stats(train$Fare)$out
+
+```
+
 
 # 4. Anàlisi de dades
 
