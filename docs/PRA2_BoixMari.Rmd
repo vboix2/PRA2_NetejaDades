@@ -116,12 +116,20 @@ summary(test)
 
 ## 3.1. Elements buits
 
-Examinem els elements buits a les columnes dels dos conjunts de dades. Podem veure que tenim molts valors NA a la columna *Age* dels dos dataframes i un a la columna *Fare* del conjunt de test. A més, com veiem al resum anterior, l'atribut *Embarked* del conjunt train també conté dos valors buits.
+Examinem els elements buits a les columnes dels dos conjunts de dades. Podem veure que tenim molts valors NA a la columna *Age* dels dos dataframes i un a la columna *Fare* del conjunt de test. 
+
+```{r}
+# Nombre de valors NA per atribut
+sapply(train, function(x) sum(is.na(x)))
+sapply(test, function(x) sum(is.na(x)))
+```
+
+A més, els atributs *Cabin* i *Embarked* també contenen valors buits.
 
 ```{r}
 # Nombre de valors buits per atribut
-sapply(train, function(x) sum(is.na(x)))
-sapply(test, function(x) sum(is.na(x)))
+sapply(train, function(x) nrow(train[x=='',]))
+sapply(test, function(x) nrow(test[x=='',]))
 ```
 
 
