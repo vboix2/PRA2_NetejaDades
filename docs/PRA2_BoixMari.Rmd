@@ -39,38 +39,96 @@ La informació que contenen els atributs és la següent:
 
 # 2. Integració i selecció de les dades
 
+Per tal de realitzar els processos de neteja i anàlisi de les dades carregarem els dos fitxers en
+dos dataframes que anomenarem *train* i *test*. Totes les operacions de neteja les realitzarem sobre els dos dataframes.
+
 ```{r}
 # Càrrega dels fitxers de dades
 train <- read.csv('../data/Titanic_train.csv')
 test <- read.csv('../data/Titanic_test.csv')
 ```
 
+L'atribut *PassengerId* és un identificador numèric dels registres del dataframe que no ens aporta cap informació sobre els passatgers, per tant, l'eliminarem, ja que per identificar els registres ja disposem de l'índex.
+
+```{r}
+# Eliminem l'atribut PassengerId a train i test
+train <- train[,-1]
+test <- test[,-1]
+```
+
+La resta d'atributs els mantindrem perquè ens donen informació sobre el viatger i poden resultar útils per al model. Podem fer una visualització dels primers registres amb la funció *head()*.
+
+```{r}
+# Primers registres del dataframe train
+head(train)
+```
 
 # 3. Neteja de les dades
-Començem examinant el dataframe i el tipus de les seves columnes amb la funció str(), podem veure que el tipus de la columna "survived" es enter, el convertirem a Factor, el mateix passa amb la columna Pclass. 
+
+Comencem examinant el dataframe amb la funció *str()*, que ens mostra el tipus de dada i els valors dels primers registres per a cada atribut.
 
 ```{r}
-"examinem el datafram i convertim a factor les columnes Survived i Pclass"
+# Examinem el conjunt train
 str(train)
+```
+
+```{r}
+# Examinem el conjunt test
 str(test)
 ```
+
+Com veiem, els atributs *Survived* i *Pclass* són de tipus enter. El primer que farem es convertir-los a tipus factor.
+
 ```{r}
-train[,'Survived']<-factor(train[,'Survived'])
-train[,'Pclass']<-factor(train[,'Pclass'])
-test[,'Pclass']<-factor(test[,'Pclass'])
-str(train)
+# Conversió de Survived i Pclass a factor
+train[,'Survived'] <- factor(train[,'Survived'])
+train[,'Pclass'] <- factor(train[,'Pclass'])
+test[,'Pclass'] <- factor(test[,'Pclass'])
 ```
-Al convertir a factor podem veure que les columnes "Survived" i "Pclass" no contenen cap valor nul. Les columnes que contenen valors nuls o buits són "Cabin", "Embarked", "Age" (NA)       
+
+L'atribut *Name* és de tipus factor, però té tant nivells com registres; en aquest cas el convertirem a character.
+
+```{r}
+# Conversió de Name a character
+train[,'Name'] <- as.character(train[,'Name'])
+test[,'Name'] <- as.character(test[,'Name'])
+```
+
+Després d'aquestes transformacions, els tipus de dada per a cada atribut són:
+
+* *Factor*: Survived, Pclass, Sex, Ticket, Cabin, Embarked
+* *int*: SibSp, Parch
+* *num*: Age, Fare
+* *chr*: Name
+
+Abans d'analitzar els elements buit i extrems pot resultar útil mostrar un resum de les dades amb la funció *summary()*.
+
+```{r}
+# Resum de les dades train
+summary(train)
+```
+
+```{r}
+# Resum de les dades test
+summary(test)
+```
+
 
 ## 3.1. Elements buits
-Examinarem els elements buids a les columnes dels dataframes "Train" i "test". Podem veure que tenim molts de valors NA a la columna "Age" i un a la columna "Fare"del conjunt de test.
+
+Examinem els elements buits a les columnes dels dos conjunts de dades. Podem veure que tenim molts valors NA a la columna *Age* dels dos dataframes i un a la columna *Fare* del conjunt de test. A més, com veiem al resum anterior, l'atribut *Embarked* del conjunt train també conté dos valors buits.
+
 ```{r}
+# Nombre de valors buits per atribut
 sapply(train, function(x) sum(is.na(x)))
 sapply(test, function(x) sum(is.na(x)))
 ```
 
+
 ## 3.2. Valors extrems
+
 Examinem els valors extrems amb els boxplot.stats(columna)$out
+
 ```{r}
 boxplot.stats(train$Age)$out
 boxplot.stats(train$Fare)$out
