@@ -132,6 +132,55 @@ sapply(train, function(x) nrow(train[x=='',]))
 sapply(test, function(x) nrow(test[x=='',]))
 ```
 
+**Age**
+
+
+**Fare**
+
+Per imputar el valor buit del preu del bitllet (*Fare*) podem utilitzar la informació de la classe del viatger (*Pclass*), ja que és lògic pensar que els bitllets de millor classe seran més cars. Això ho podem confirmar mostrant la mitjana de *Fare* per a cada valor de *Pclass*.
+
+```{r}
+# Mitjana de Fare per cada valor de Pclass als conjunts train i test conjuntament
+aggregate(Fare~Pclass, data=rbind(train[,-1],test), mean)
+```
+
+Com veiem, hi ha una diferència significativa entre la mitjana del preu de bitllet per a cada classe. Utilitzarem aquesta circumstància per imputar el valor NA de *Fare* amb la mitjana de valors per als viatgers de la mateixa classe.
+
+```{r}
+# Imputem el valor NA de Fare amb la mitjana de valors de la mateixa classe
+test[is.na(test$Fare),'Fare'] <- aggregate(Fare~Pclass, data=rbind(train[,-1],test),
+                                           mean)[test[is.na(test$Fare),'Pclass'],'Fare']
+```
+
+**Cabin**
+
+
+**Embarked**
+
+Per imputar els valors buits del port d'embarcament (*Embarked*) podem aprofitar la informació del bitllet. Si consultem les dades dels viatgers que tenen un valor buit a *Embarked* veiem que tenen el mateix número de bitllet.
+
+```{r}
+# Ticket dels viatgers amb valor buit a Embarked
+train[train$Embarked=='',c("Embarked", "Ticket")]
+```
+
+Si ampliem la cerca i mostrem el valor d'*Embarked* per a tots els viatgers amb un número de bitllet semblant (113XXX) veiem que la majoria han pujat a Southampton ('S'). Per tant assignarem aquest valor als dos valors buits d'*Embarked*.
+
+```{r}
+# Viatgers amb un número de ticket semblant a l'anterior (113XXX) agrupats pel valor d'Embarked
+ summary(train[grep("113.*",train$Ticket),"Embarked"])
+
+# Assignem el valor 'S' als valors buits d'Embarked
+train[train$Embarked=='', "Embarked"] <- 'S'
+```
+
+Per acabar, comprovem que ja no hi ha cap valor NA o buit.
+
+```{r}
+# Nombre de valors buits per atribut
+sapply(train, function(x) nrow(train[x=='',]))
+sapply(test, function(x) nrow(test[x=='',]))
+```
 
 ## 3.2. Valors extrems
 
@@ -140,7 +189,6 @@ Examinem els valors extrems amb els boxplot.stats(columna)$out
 ```{r}
 boxplot.stats(train$Age)$out
 boxplot.stats(train$Fare)$out
-
 ```
 
 
