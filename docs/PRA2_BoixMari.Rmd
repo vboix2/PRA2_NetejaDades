@@ -13,18 +13,18 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r include=FALSE}
 # Càrrega de paquets
 library(colorspace)
 library(grid)
 library(data.table)
 library(VIM)
-suppressWarnings(suppressMessages(library(VIM)))
+# suppressWarnings(suppressMessages(library(VIM)))
 ```
 
 # 1. Descripció del dataset
 
-El dataset utilitzat en aquesta pràctica s'ha obtingut de la pàgina web de *Kaggle*  (https://www.kaggle.com/c/titanic) i conté les dades dels passatgers del Titanic durant el desastre del 1912. L'objectiu d'aquest conjunt de dades és realitzar una predicció sobre la supervivència d'alguns passatgers a partir de les seves característiques. Per tant, es tracta d'una tasca de classificació on cal construir un model supervisat capaç de determinar el valor de l'atribut *Survived* (variable objectiu o dependent) a partir de la resta d'atributs (variables independents). 
+El dataset utilitzat en aquesta pràctica s'ha obtingut de la pàgina web de *Kaggle*  (https://www.kaggle.com/c/titanic) i conté les dades dels passatgers del Titanic durant el desastre del 1912. L'objectiu d'aquest conjunt de dades és realitzar una predicció sobre la supervivència d'alguns passatgers a partir de les seves característiques. Per tant, es tracta d'un problema de classificació dins dels models d'aprenentatge supervisat, on cal construir un model capaç de determinar el valor de l'atribut *Survived* (variable objectiu o dependent) a partir de la resta d'atributs (variables independents). 
 
 Les conjunt de dades està format per dos fitxers CSV:
 
@@ -211,12 +211,54 @@ sapply(test, function(x) nrow(test[x=='',]))
 
 ## 3.2. Valors extrems
 
-Examinem els valors extrems amb els boxplot.stats(columna)$out
+Els valors extrems o *outliers* són aquells valors que es troben tan allunyats de la resta de valors que ens poden fer pensar que són erronis o tenen un origen diferent. Generalment es consideren *outliers* els valors que estan a més de 3 desviacions estàndards de la mitjana de la població. A continuació estudiarem els valors extrems per als atributs de tipus numèric, tant enters com reals.
+
+**Age**
+
+Si representem el diagrama de caixa de l'atribut *Age* veiem que la majoria de passatgers se situen entre els 20 i els 40 anys, però també apareixen alguns punts aïllats per sobre dels 60 anys.
 
 ```{r}
-boxplot.stats(train$Age)$out
-boxplot.stats(train$Fare)$out
+# Possibles outliers a l'atribut Age
+boxplot(rbind(train[,-1],test)$Age, horizontal = TRUE)
 ```
+
+Si mostrem els valors extrems per a aquest atribut obtenim molts valors entre 60 i 80.
+
+```{r}
+# Possibles outliers a l'atribut Age
+boxplot.stats(rbind(train[,-1],test)$Age)$out
+```
+
+Com veiem, tot i que la funció detecta com a valors extrems les edats per sobre dels 60 anys, tots els passatgers se situen entre els 0 i els 80 anys, que són edats perfectament possibles i per tant mantindrem tots els registres sense cap modificació.
+
+```{r}
+# Rang total de l'atribut Age
+range(rbind(train[,-1],test)$Age)
+```
+
+**SibSp**
+
+```{r}
+# Possibles outliers a l'atribut SibSp
+boxplot.stats(rbind(train[,-1],test)$SibSp)$out
+```
+
+**Parch**
+
+```{r}
+# Possibles outliers a l'atribut Parch
+boxplot.stats(rbind(train[,-1],test)$Parch)$out
+```
+
+**Fare**
+
+```{r}
+# Possibles outliers a l'atribut Fare
+boxplot.stats(rbind(train[,-1],test)$Fare)$out
+```
+
+
+## 3.3. Conversió de dades
 
 
 # 4. Anàlisi de dades
