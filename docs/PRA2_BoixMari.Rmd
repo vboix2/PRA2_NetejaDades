@@ -14,8 +14,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-# Instalació del paquet VIM
-install.packages("VIM")
+# Càrrega de paquets
+library(colorspace)
+library(grid)
+library(data.table)
+library(VIM)
 suppressWarnings(suppressMessages(library(VIM)))
 ```
 
@@ -138,20 +141,6 @@ sapply(train, function(x) nrow(train[x=='',]))
 sapply(test, function(x) nrow(test[x=='',]))
 ```
 
-**Age**
-Per imputat el valor buit de l'edat (*Age*) farem servir el mètode d'imputació basada en els k-veïns més pròxims (KNN). El que fa l'algorisme knn-imputation és identificar les k-observacions més properes segons la distància euclidiana i assigna la mitjana ponderada a l'atribut amb valor NA.
-
-```{r}
-# Imputació de valors amb VIM
-train$Age <- kNN(train)$Age 
-test$Age <- kNN(test)$Age 
-```
-Tornem a comprovar els valors nuls
-```{r}
-# Nombre de valors NA per atribut
-sapply(train, function(x) sum(is.na(x)))
-sapply(test, function(x) sum(is.na(x)))
-```
 **Fare**
 
 Per imputar el valor buit del preu del bitllet (*Fare*) podem utilitzar la informació de la classe del viatger (*Pclass*), ja que és lògic pensar que els bitllets de millor classe seran més cars. Això ho podem confirmar mostrant la mitjana de *Fare* per a cada valor de *Pclass*.
@@ -170,18 +159,14 @@ test[is.na(test$Fare),'Fare'] <- aggregate(Fare~Pclass, data=rbind(train[,-1],te
 ```
 
 **Cabin**
-Al cas de l'atribut *Cabin* substituirem els valors buits pel marcador 'UNKNOWN', afegim la nova categoria al factor i eliminem els que no usem.
+
+Al cas de l'atribut *Cabin* substituirem els valors buits pel marcador 'UNKNOWN'.
+
 ```{r}
-clean_cabin<- function(factor_var){
-  levels(factor_var$Cabin) <- c(levels(factor_var$Cabin), 'UNKNOWN')
-  factor_var[factor_var$Cabin==''|is.na(factor_var$Cabin), 'Cabin'] <- 'UNKNOWN'
-  droplevels(factor_var$Cabin) 
-}
-
-clean_cabin(test)
-clean_cabin(train)
-
+levels(train$Cabin)[levels(train$Cabin)==''] <- 'UNKNOWN'
+levels(test$Cabin)[levels(test$Cabin)==''] <- 'UNKNOWN'
 ```
+
 **Embarked**
 
 Per imputar els valors buits del port d'embarcament (*Embarked*) podem aprofitar la informació del bitllet. Si consultem les dades dels viatgers que tenen un valor buit a *Embarked* veiem que tenen el mateix número de bitllet.
@@ -201,9 +186,24 @@ Si ampliem la cerca i mostrem el valor d'*Embarked* per a tots els viatgers amb 
 train[train$Embarked=='', "Embarked"] <- 'S'
 ```
 
+**Age**
+
+Finalment, per imputar el valor buit de l'edat (*Age*) farem servir el mètode basat en els k-veïns més propers (KNN). El que fa l'algorisme knn-imputation és identificar les k-observacions més properes i assignar la mitjana ponderada a l'atribut amb valor NA. En el nostre cas utilitzarem k=3 i tindrem en compte tots els atributs excepte *Name*.
+
+```{r}
+# Imputació de valors amb VIM
+train$Age <- kNN(train[,-3], k=3)$Age 
+test$Age <- kNN(test[,-2], k=3)$Age 
+```
+
+
 Per acabar, comprovem que ja no hi ha cap valor NA o buit.
 
 ```{r}
+# Nombre de valors NA per atribut
+sapply(train, function(x) sum(is.na(x)))
+sapply(test, function(x) sum(is.na(x)))
+
 # Nombre de valors buits per atribut
 sapply(train, function(x) nrow(train[x=='',]))
 sapply(test, function(x) nrow(test[x=='',]))
