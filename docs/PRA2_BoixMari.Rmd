@@ -19,7 +19,7 @@ library(colorspace)
 library(grid)
 library(data.table)
 library(VIM)
-# suppressWarnings(suppressMessages(library(VIM)))
+library(ggplot2)
 ```
 
 # 1. Descripció del dataset
@@ -260,12 +260,51 @@ boxplot.stats(rbind(train[,-1],test)$Fare)$out
 
 ## 3.3. Conversió de dades
 
-
 # 4. Anàlisi de dades
 
 ## 4.1. Selecció de dades
 
 ## 4.2. Normalitat i homogeneïtat de la variància
+
+**Age**
+Analitzarem la normalita de la distribució de l'atribut *Age*, primerament de manera gràfica i després amb el test de Kolmogorov-Smirnov y modificació de Lillefors.
+
+```{r}
+
+df <- rbind(train[,-1],test)
+
+```
+```{r}
+ggplot(data = df, aes(x = Age)) +
+  geom_histogram(aes(y = ..density.., fill = ..count..)) +
+  scale_fill_gradient(low = "#DCDCDC", high = "#7C7C7C") +
+  stat_function(fun = dnorm, colour = "firebrick",
+                args = list(mean = mean(df$Age),
+                            sd = sd(df$Age))) +
+  ggtitle("Histograma + curva normal") +
+  theme_bw()
+```
+```{r}
+qqnorm(train$Age, pch = 19, col = "gray50")
+qqline(train$Age)
+```
+```{r}
+library(nortest)
+alpha = 0.05 
+col.names = colnames(train)
+for (i in 1:ncol(train)) { 
+  if (i == 1) cat("Variables que no siguen una distribución normal:\n") 
+  if (is.integer(train[,i]) | is.numeric(train[,i])) { 
+    p_val = ad.test(train[,i])$p.value 
+    if (p_val < alpha) { 
+      cat(col.names[i])
+      # Format output 
+      if (i < ncol(train) - 1) cat(", ") 
+      if (i %% 3 == 0) cat("\n")
+    }
+  }
+}
+```
 
 ## 4.3. Proves estadístiques
 
