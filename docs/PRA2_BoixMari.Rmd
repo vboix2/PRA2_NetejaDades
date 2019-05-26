@@ -260,6 +260,32 @@ boxplot.stats(rbind(train[,-1],test)$Fare)$out
 
 ## 3.3. Conversió de dades
 
+*Name*
+Al cas de l'atribut *Name* i volem extreure el títol de tractament que si diferència un estatus que podria influir en la supervivencia de l'individu.
+Als casos a on el tractament no està inclòs al nom, si són homes, li assignem "Mr" i si són dones (Miss o Mrs) li assignarem el tractament fent servir KNN. 
+
+````{r}
+library(stringr)
+
+train$Title <- str_extract(string = train$Name,pattern = "(Mr|Miss|Mrs)\\.")
+test$Title <- str_extract(string = test$Name,pattern = "(Mr|Miss|Mrs)\\.")
+train$Title[is.na(train$Title) & train$Sex =='male'] <- 'Mr'
+test$Title[is.na(test$Title) & test$Sex =='male'] <- 'Mr'
+train[train$Sex=='female',]$Title <- kNN(train[train$Sex=='female',], k=3)$Title 
+test[test$Sex=='female',]$Title <- kNN(test[test$Sex=='female',], k=3)$Title 
+
+```
+
+```{r}
+# Nombre de valors NA per atribut
+sapply(train, function(x) sum(is.na(x)))
+sapply(test, function(x) sum(is.na(x)))
+```
+
+
+
+
+
 # 4. Anàlisi de dades
 
 ## 4.1. Selecció de dades
@@ -267,39 +293,38 @@ boxplot.stats(rbind(train[,-1],test)$Fare)$out
 ## 4.2. Normalitat i homogeneïtat de la variància
 
 **Age**
-Analitzarem la normalita de la distribució de l'atribut *Age*, primerament de manera gràfica i després amb el test de Kolmogorov-Smirnov y modificació de Lillefors.
+Analitzarem la normalitat de la distribució de l'atribut *Age*, primerament de manera gràfica i després amb el test d'Anderson-Darlings (a tots els atributs).
 
 ```{r}
 
-df <- rbind(train[,-1],test)
+test_and_train <- rbind(train[,-1],test)
 
-```
-```{r}
-ggplot(data = df, aes(x = Age)) +
+
+ggplot(data = test_and_train, aes(x = Age)) +
   geom_histogram(aes(y = ..density.., fill = ..count..)) +
   scale_fill_gradient(low = "#DCDCDC", high = "#7C7C7C") +
   stat_function(fun = dnorm, colour = "firebrick",
-                args = list(mean = mean(df$Age),
-                            sd = sd(df$Age))) +
+                args = list(mean = mean(test_and_train$Age),
+                            sd = sd(test_and_train$Age))) +
   ggtitle("Histograma + curva normal") +
   theme_bw()
 ```
 ```{r}
-qqnorm(train$Age, pch = 19, col = "gray50")
-qqline(train$Age)
+qqnorm(test_and_train$Age, pch = 19, col = "gray50")
+qqline(test_and_train$Age)
 ```
 ```{r}
 library(nortest)
 alpha = 0.05 
-col.names = colnames(train)
-for (i in 1:ncol(train)) { 
+col.names = colnames(test_and_train)
+for (i in 1:ncol(test_and_train)) { 
   if (i == 1) cat("Variables que no siguen una distribución normal:\n") 
-  if (is.integer(train[,i]) | is.numeric(train[,i])) { 
-    p_val = ad.test(train[,i])$p.value 
+  if (is.integer(test_and_train[,i]) | is.numeric(test_and_train[,i])) { 
+    p_val = ad.test(test_and_train[,i])$p.value 
     if (p_val < alpha) { 
       cat(col.names[i])
       # Format output 
-      if (i < ncol(train) - 1) cat(", ") 
+      if (i < ncol(test_and_train) - 1) cat(", ") 
       if (i %% 3 == 0) cat("\n")
     }
   }
