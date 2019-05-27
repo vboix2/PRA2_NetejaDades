@@ -146,11 +146,11 @@ test[is.na(test$Fare),'Fare'] <- aggregate(Fare~Pclass, data=rbind(train[,-1],te
 
 **Cabin**
 
-En el cas de l'atribut *Cabin*, substituirem els valors buits pel marcador 'UNKNOWN'.
+En el cas de l'atribut *Cabin*, substituirem els valors buits pel marcador 'NO'.
 
 ```{r}
-levels(train$Cabin)[levels(train$Cabin)==''] <- 'UNKNOWN'
-levels(test$Cabin)[levels(test$Cabin)==''] <- 'UNKNOWN'
+levels(train$Cabin)[levels(train$Cabin)==''] <- 'NO'
+levels(test$Cabin)[levels(test$Cabin)==''] <- 'NO'
 ```
 
 **Embarked**
@@ -299,8 +299,11 @@ Com en els casos anteriors, per a aquest atribut també hem decidit mantenir tot
 
 ## 3.3. Conversió de dades
 
-*Name*
-Al cas de l'atribut *Name* i volem extreure el títol de tractament que si diferència un estatus que podria influir en la supervivencia de l'individu.
+A continuació modificarem alguns atributs per tal de reduir el nombre de categories i obtenir-ne informació que pugui resultat interessant per a la fase d'anàlisi.
+
+**Name**
+
+A l'atribut *Name* i volem extreure el títol de tractament que si diferència un estatus que podria influir en la supervivencia de l'individu.
 Als casos a on el tractament no està inclòs al nom, si són homes, li assignem "Mr" i si són dones (Miss o Mrs) li assignarem el tractament fent servir KNN. 
 
 ````{r}
@@ -315,15 +318,22 @@ test[test$Sex=='female',]$Title <- kNN(test[test$Sex=='female',], k=3)$Title
 
 ```
 
+**Cabin**
+
+L'atribut cabina conté més de 100 nivells. Una manera de reduir-los pot ser eliminar els números i conservar únicament la lletra, ja que segurament indica el tipus de cabina o la zona on s'allotjaven els passatgers i pot resultar significativa.
+
 ```{r}
-# Nombre de valors NA per atribut
-sapply(train, function(x) sum(is.na(x)))
-sapply(test, function(x) sum(is.na(x)))
+# Extraiem la lletra de l'atribut Cabin
+levels(train$Cabin)[-1] <- sub("([A-T]).*","\\1", levels(train$Cabin)[-1])
+levels(test$Cabin)[-1] <- sub("([A-T]).*","\\1", levels(test$Cabin)[-1])
 ```
 
+Si mostrem el percentatge de supervivents per tipus de cabina veiem que resulta força alt per a determinades lletres i molt baix per als passatgers que no tenien cap cabina assignada.
 
-
-
+```{r}
+# Percentatge de supervivents per tipus de cabina
+aggregate(Survived~Cabin, data=train, mean)
+```
 
 # 4. Anàlisi de dades
 
