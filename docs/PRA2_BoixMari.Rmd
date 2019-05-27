@@ -24,7 +24,7 @@ library(ggplot2)
 
 # 1. Descripció del dataset
 
-El dataset utilitzat en aquesta pràctica s'ha obtingut de la pàgina web de *Kaggle*  (https://www.kaggle.com/c/titanic) i conté les dades dels passatgers del Titanic durant el desastre del 1912. L'objectiu d'aquest conjunt de dades és realitzar una predicció sobre la supervivència d'alguns passatgers a partir de les seves característiques. Per tant, es tracta d'un problema de classificació dins dels models d'aprenentatge supervisat, on cal construir un model capaç de determinar el valor de l'atribut *Survived* (variable objectiu o dependent) a partir de la resta d'atributs (variables independents). 
+El dataset utilitzat en aquesta pràctica s'ha obtingut de la pàgina web de *Kaggle*  (https://www.kaggle.com/c/titanic) i conté les dades dels passatgers del Titanic durant el desastre del 1912. L'objectiu d'aquest conjunt de dades és realitzar una predicció sobre la supervivència d'alguns passatgers a partir de les seves característiques. Per tant, es tracta d'un problema de classificació d'aprenentatge supervisat, on cal construir un model capaç de determinar el valor de l'atribut *Survived* (variable objectiu o dependent) a partir de la resta d'atributs (variables independents). 
 
 Les conjunt de dades està format per dos fitxers CSV:
 
@@ -86,16 +86,7 @@ str(train)
 str(test)
 ```
 
-Com veiem, els atributs *Survived* i *Pclass* són de tipus enter. El primer que farem es convertir-los a tipus factor.
-
-```{r}
-# Conversió de Survived i Pclass a factor
-train[,'Survived'] <- factor(train[,'Survived'])
-train[,'Pclass'] <- factor(train[,'Pclass'])
-test[,'Pclass'] <- factor(test[,'Pclass'])
-```
-
-L'atribut *Name* és de tipus factor, però té tant nivells com registres; en aquest cas el convertirem a character.
+L'atribut *Name* és de tipus factor, però té tant nivells com registres, per tant el convertirem a character.
 
 ```{r}
 # Conversió de Name a character
@@ -103,10 +94,10 @@ train[,'Name'] <- as.character(train[,'Name'])
 test[,'Name'] <- as.character(test[,'Name'])
 ```
 
-Després d'aquestes transformacions, els tipus de dada per a cada atribut són:
+Els tipus de dada per a cada atribut són:
 
-* *Factor*: Survived, Pclass, Sex, Ticket, Cabin, Embarked
-* *int*: SibSp, Parch
+* *Factor*: Sex, Ticket, Cabin, Embarked
+* *int*: Survived, Pclass, SibSp, Parch
 * *num*: Age, Fare
 * *chr*: Name
 
@@ -114,12 +105,7 @@ Abans d'analitzar els elements buit i extrems pot resultar útil mostrar un resu
 
 ```{r}
 # Resum de les dades train
-summary(train)
-```
-
-```{r}
-# Resum de les dades test
-summary(test)
+summary(rbind(train[-1],test))
 ```
 
 
@@ -160,7 +146,7 @@ test[is.na(test$Fare),'Fare'] <- aggregate(Fare~Pclass, data=rbind(train[,-1],te
 
 **Cabin**
 
-Al cas de l'atribut *Cabin* substituirem els valors buits pel marcador 'UNKNOWN'.
+En el cas de l'atribut *Cabin*, substituirem els valors buits pel marcador 'UNKNOWN'.
 
 ```{r}
 levels(train$Cabin)[levels(train$Cabin)==''] <- 'UNKNOWN'
@@ -218,44 +204,97 @@ Els valors extrems o *outliers* són aquells valors que es troben tan allunyats 
 Si representem el diagrama de caixa de l'atribut *Age* veiem que la majoria de passatgers se situen entre els 20 i els 40 anys, però també apareixen alguns punts aïllats per sobre dels 60 anys.
 
 ```{r}
-# Possibles outliers a l'atribut Age
-boxplot(rbind(train[,-1],test)$Age, horizontal = TRUE)
+# Diagrama de caixa de l'atribut Age
+A.Age <- c(train$Age,test$Age)
+boxplot(A.Age, horizontal = TRUE)
 ```
 
 Si mostrem els valors extrems per a aquest atribut obtenim molts valors entre 60 i 80.
 
 ```{r}
 # Possibles outliers a l'atribut Age
-boxplot.stats(rbind(train[,-1],test)$Age)$out
+boxplot.stats(A.Age)$out
 ```
 
-Com veiem, tot i que la funció detecta com a valors extrems les edats per sobre dels 60 anys, tots els passatgers se situen entre els 0 i els 80 anys, que són edats perfectament possibles i per tant mantindrem tots els registres sense cap modificació.
+Si calculem els valors que es troben per sobre de 3 desviacions estàndard el nombre d'*outliers* disminueix a només 3.
 
 ```{r}
+# Edats superiors a 3 desviacions estàndard per sobre de la mitjana
+A.Age[A.Age > (mean(A.Age) + 3 * sd(A.Age))]
+
 # Rang total de l'atribut Age
-range(rbind(train[,-1],test)$Age)
+range(A.Age)
 ```
+
+Tot i que hem detectat 3 possibles outliers, tots els passatgers se situen entre els 0 i els 80 anys, que són edats perfectament possibles i per tant mantindrem tots els registres sense cap modificació.
+
 
 **SibSp**
 
+L'atribut *SibSp* ens indica el nombre de germans o marit/muller de cada passatger. Si mostrem la distribució de valors en una diagrama de caixa veiem que la majoria de valors se situen entre 0 i 1.
+
+```{r}
+# Diagrama de caixa de l'atribut SibSp
+A.SibSp <- c(train$SibSp, test$SibSp)
+boxplot(A.SibSp, horizontal = TRUE)
+```
+
+Repetint les anàlisis anteriors veiem que la funció *boxplot* detecta com a extrems els valors superiors a 2, si calculem els valors superiors a 3 desviacions estàndard trobem els valors superiors a 3, mentre que el valor més alt de l'atribut és de 8. Tots aquests valors són perfectament possibles com a nombre de fills i per tant també els mantidrem.
+
 ```{r}
 # Possibles outliers a l'atribut SibSp
-boxplot.stats(rbind(train[,-1],test)$SibSp)$out
+boxplot.stats(A.SibSp)$out
+
+# Valors per sobre de 3 SD
+A.SibSp[A.SibSp > (mean(A.SibSp) + 3 * sd(A.SibSp))]
+
+# Rang total de l'atribut
+range(A.SibSp)
 ```
 
 **Parch**
 
+L'atribut *Parch* indica el nombre de pares o fills al vaixell per a cada passatger. Si repetim els càlculs obtenim un resultat molt semblant a l'anterior. En aquest cas, la majoria de registres tenen un valor de 0, això fa que la mitjana sigui molt baixa i la resta de valors apareguin com a outliers. Malgrat tot, els rang de l'atribut se situa entre 0 i 9 fills, que són valors possibles i que encaixen amb els resultats de *SibSp*, per tant també els mantindrem.
+
+```{r}
+# Diagrama de caixa de l'atribut Parch
+A.Parch <- c(train$Parch, test$Parch)
+boxplot(A.Parch, horizontal = TRUE)
+```
+
 ```{r}
 # Possibles outliers a l'atribut Parch
-boxplot.stats(rbind(train[,-1],test)$Parch)$out
+boxplot.stats(A.Parch)$out
+
+# Valors per sobre de 3 SD
+A.Parch[A.Parch > (mean(A.Parch) + 3 * sd(A.Parch))]
+
+# Rang total de l'atribut
+range(A.Parch)
 ```
 
 **Fare**
 
+Per acabar estudiarem els valors extrem de l'atribut *Fare*, que indica el preu del bitllet de cada passatger. En aquest cas veiem que la majoria de bitllets se situen per sota de 50, tenim molts possibles *outliers* per sobre de 80 i un valor màxim superior als 500.
+
+```{r}
+# Diagrama de caixa de l'atribut Fare
+A.Fare <- c(train$Fare, test$Fare)
+boxplot(A.Fare, horizontal = TRUE)
+```
+
 ```{r}
 # Possibles outliers a l'atribut Fare
-boxplot.stats(rbind(train[,-1],test)$Fare)$out
+boxplot.stats(A.Fare)$out
+
+# Valors per sobre de 3 SD
+A.Fare[A.Fare > (mean(A.Fare) + 3 * sd(A.Fare))]
+
+# Rang total de l'atribut
+range(A.Fare)
 ```
+
+Com en els casos anteriors, per a aquest atribut també hem decidit mantenir tots els valors.
 
 
 ## 3.3. Conversió de dades
