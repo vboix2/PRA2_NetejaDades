@@ -328,11 +328,13 @@ levels(train$Cabin)[-1] <- sub("([A-T]).*","\\1", levels(train$Cabin)[-1])
 levels(test$Cabin)[-1] <- sub("([A-T]).*","\\1", levels(test$Cabin)[-1])
 ```
 
-Si mostrem el percentatge de supervivents per tipus de cabina veiem que resulta força alt per a determinades lletres i molt baix per als passatgers que no tenien cap cabina assignada.
+
+Una vegada hem netejat les dades les exportarem en un nou fitxer.
 
 ```{r}
-# Percentatge de supervivents per tipus de cabina
-aggregate(Survived~Cabin, data=train, mean)
+# Exportació dels conjunt train i test nets
+write.csv(train, '../data/Titanic_train_clean.csv')
+write.csv(test, '../data/Titanic_test_clean.csv')
 ```
 
 # 4. Anàlisi de dades
