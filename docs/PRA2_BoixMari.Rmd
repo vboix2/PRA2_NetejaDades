@@ -19,7 +19,6 @@ library(colorspace)
 library(grid)
 library(data.table)
 library(VIM)
-# suppressWarnings(suppressMessages(library(VIM)))
 ```
 
 # 1. Descripció del dataset
