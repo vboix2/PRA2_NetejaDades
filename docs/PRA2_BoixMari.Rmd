@@ -299,23 +299,20 @@ Com en els casos anteriors, per a aquest atribut també hem decidit mantenir tot
 
 ## 3.3. Conversió de dades
 
-A continuació modificarem alguns atributs per tal de reduir el nombre de categories i obtenir-ne informació que pugui resultat interessant per a la fase d'anàlisi.
+A continuació transformarem alguns atributs per tal de reduir-ne el nombre de categories o obtenir-ne informació que pugui resultat interessant per a la fase d'anàlisi.
 
 **Name**
 
-A l'atribut *Name* i volem extreure el títol de tractament que si diferència un estatus que podria influir en la supervivencia de l'individu.
-Als casos a on el tractament no està inclòs al nom, si són homes, li assignem "Mr" i si són dones (Miss o Mrs) li assignarem el tractament fent servir KNN. 
+A l'atribut *Name* n'extraurem el títol de tractament, ja que diferencia el seu estatus i pot influir en la supervivencia de l'individu.
 
-````{r}
-library(stringr)
+```{r}
+# Extraiem el títol de l'atribut Name, situat entre ',' i '.'.
+train$Titol <- sub(".*\\,\\s([A-z\\s]*)\\.\\s.*", "\\1", train$Name)
+test$Titol <- sub(".*\\,\\s([A-z\\s]*)\\.\\s.*", "\\1", test$Name)
 
-train$Title <- str_extract(string = train$Name,pattern = "(Mr|Miss|Mrs)\\.")
-test$Title <- str_extract(string = test$Name,pattern = "(Mr|Miss|Mrs)\\.")
-train$Title[is.na(train$Title) & train$Sex =='male'] <- 'Mr'
-test$Title[is.na(test$Title) & test$Sex =='male'] <- 'Mr'
-train[train$Sex=='female',]$Title <- kNN(train[train$Sex=='female',], k=3)$Title 
-test[test$Sex=='female',]$Title <- kNN(test[test$Sex=='female',], k=3)$Title 
-
+# Eliminem l'atribut Name perquè ja no ens serà útil
+train <- train[,-3]
+test <- test[,-2]
 ```
 
 **Cabin**
@@ -328,6 +325,46 @@ levels(train$Cabin)[-1] <- sub("([A-T]).*","\\1", levels(train$Cabin)[-1])
 levels(test$Cabin)[-1] <- sub("([A-T]).*","\\1", levels(test$Cabin)[-1])
 ```
 
+**Ticket**
+
+Finalment, tot i que l'atribut *Ticket* també conté molts nivells i sembla poc útil, podem provar d'extreure'n alguna informació interessant. A continuació mostrem les dades d'alguns passatgers que comparteixen el valor de *Ticket*.
+
+```{r}
+# Valors més freqüents de Ticket
+sort(table(train$Ticket), decreasing = TRUE)[c(1:5)]
+
+# Passatgers amb el Ticket més freqüent
+train[train$Ticket=='1601',]
+```
+
+Com veiem, els passatgers amb un mateix valor per a *Ticket* també comparteixen moltes característiques, perquè segurament formaven una família o viatjaven junts. Això ho aprofitarem per calcular la mida del grup de persones que viatjaven conjuntament i crear l'atribut *Group*.
+
+```{r}
+# Creem una taula de freqüències per als tickets
+tickets <- as.data.frame(table(rbind(train["Ticket"],test["Ticket"])))
+colnames(tickets) <- c("Ticket","Group")
+
+# Assignem el valor de la freqüència a un nou atribut "Group"
+train <- merge(train, tickets, by="Ticket")
+test <- merge(test, tickets, by="Ticket")
+
+# Eliminem l'atribut Ticket
+train <- train[-1]
+test <- test[-1]
+```
+
+**Fare**
+
+Finalment, com que el preu del bitllet sembla ser el mateix per a cada ticket, és a dir, sembla tractar-se de l'import per a tot el grup, dividirem l'import del passatge (*Fare*) per les dimensions del grup (*Group*) per tal d'obtenir el preu individual del bitllet.
+
+```{r}
+# Càlcul del preu individual del bitllet
+train$Fare <- train$Fare / train$Group 
+test$Fare <- test$Fare / test$Group
+```
+
+
+## 3.4. Exportació de dades
 
 Una vegada hem netejat les dades les exportarem en un nou fitxer.
 
@@ -344,13 +381,14 @@ write.csv(test, '../data/Titanic_test_clean.csv')
 ## 4.2. Normalitat i homogeneïtat de la variància
 
 **Age**
-Analitzarem la normalitat de la distribució de l'atribut *Age*, primerament de manera gràfica i després amb el test d'Anderson-Darlings (a tots els atributs).
+
+Analitzarem la normalitat de la distribució de l'atribut *Age*, primer de manera gràfica i després amb el test d'Anderson-Darlings.
 
 ```{r}
-
+# Unim les dades en un dataframe
 test_and_train <- rbind(train[,-1],test)
 
-
+# Representem les dades en un histograma
 ggplot(data = test_and_train, aes(x = Age)) +
   geom_histogram(aes(y = ..density.., fill = ..count..)) +
   scale_fill_gradient(low = "#DCDCDC", high = "#7C7C7C") +
@@ -360,10 +398,14 @@ ggplot(data = test_and_train, aes(x = Age)) +
   ggtitle("Histograma + curva normal") +
   theme_bw()
 ```
+
+
 ```{r}
 qqnorm(test_and_train$Age, pch = 19, col = "gray50")
 qqline(test_and_train$Age)
 ```
+
+
 ```{r}
 library(nortest)
 alpha = 0.05 
@@ -383,6 +425,31 @@ for (i in 1:ncol(test_and_train)) {
 ```
 
 ## 4.3. Proves estadístiques
+
+En aquest apartat analitzarem les dades des de tres punts de vista, intentant respondre tres preguntes diferents sobre les dades:
+
+* Quines variables numèriques influeixen més en la supervivència dels passatgers?
+* El sexe del passatger influeix en la seva probabilitat de sobreviure?
+* Quins passatgers del conjunt *test* tenen més probabilitats de sobreviure?
+
+
+### 4.3.1. Anàlisi de correlació
+
+A la primera anàlisi ens preguntem quines variables numèriques influeixen més en la supervivència dels passatger. Per respondre-la utilitzarem un anàlisi de correlació entre les diferents variables quantitatives per al conjunt *train*, que és l'únic que conté l'atribut *Survived*. Per mesurar el grau de correlació utilitzarem el coeficient de *Pearson*.
+
+```{r}
+# Correlació entre variables numèriques
+cor(train[c("Survived","Pclass","Age","SibSp","Parch","Fare","Group")], method="pearson")
+```
+
+### 4.3.2. Contrast d'hipòtesis
+
+A la segona anàlisi ens preguntem si el sexe del passatger influeix en la seva probabilitat de sobreviure.
+
+### 4.3.3. Regressió logística
+
+Finalment, intentarem realitzar una predicció sobre la supervivència dels passatgers del conjunt *test*.
+
 
 # 5. Representació de dades
 
