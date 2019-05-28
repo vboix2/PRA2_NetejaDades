@@ -306,9 +306,9 @@ A continuació transformarem alguns atributs per tal de reduir-ne el nombre de c
 A l'atribut *Name* n'extraurem el títol de tractament, ja que diferencia el seu estatus i pot influir en la supervivencia de l'individu.
 
 ```{r}
-# Extraiem el títol de l'atribut Name, situat entre ',' i '.'.
-train$Titol <- sub(".*\\,\\s([A-z\\s]*)\\.\\s.*", "\\1", train$Name)
-test$Titol <- sub(".*\\,\\s([A-z\\s]*)\\.\\s.*", "\\1", test$Name)
+# Extraiem el títol de l'atribut Name
+train$Titol <- sub(".*\\s([A-Za-z]+)\\..*", "\\1", train$Name)
+test$Titol <- sub(".*\\s([A-Za-z]+)\\..*", "\\1", test$Name)
 
 # Eliminem l'atribut Name perquè ja no ens serà útil
 train <- train[,-3]
@@ -345,8 +345,8 @@ tickets <- as.data.frame(table(rbind(train["Ticket"],test["Ticket"])))
 colnames(tickets) <- c("Ticket","Group")
 
 # Assignem el valor de la freqüència a un nou atribut "Group"
-train <- merge(train, tickets, by="Ticket")
-test <- merge(test, tickets, by="Ticket")
+train <- join(train, tickets, by="Ticket")
+test <- join(test, tickets, by="Ticket")
 
 # Eliminem l'atribut Ticket
 train <- train[-1]
