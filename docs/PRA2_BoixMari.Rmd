@@ -308,12 +308,29 @@ A l'atribut *Name* n'extraurem el títol de tractament, ja que diferencia el seu
 
 ```{r}
 # Extraiem el títol de l'atribut Name
-train$Titol <- sub(".*\\s([A-Za-z]+)\\..*", "\\1", train$Name)
-test$Titol <- sub(".*\\s([A-Za-z]+)\\..*", "\\1", test$Name)
+train$Title <- sub(".*\\s([A-Za-z]+)\\..*", "\\1", train$Name)
+test$Title <- sub(".*\\s([A-Za-z]+)\\..*", "\\1", test$Name)
 
 # Eliminem l'atribut Name perquè ja no ens serà útil
 train <- train[,-3]
 test <- test[,-2]
+
+# Nombre de registres per categoria de Title
+table(c(train$Title, test$Title))
+```
+
+A continuació, com que el nombre de categories és força gran i algunes tenen molt pocs registres, unirem els títols poc freqüents ens una mateixa categoria 'other'. Per acabar, convertim l'atribut a tipus factor.
+
+```{r}
+# Marquem com a 'other' els títols menys freqüents
+others <- c("Capt","Countess","Don","Dona","Jonkheer","L","Lady","Mme","Sir",
+            "Major","Mlle","Ms","Col","Dr","Rev")
+train[train$Title %in% others, 'Title'] = 'other'
+test[test$Title %in% others, 'Title'] = 'other'
+
+# Convertim Title a factor
+train$Title <- as.factor(train$Title)
+test$Title <- as.factor(test$Title)
 ```
 
 **Cabin**
@@ -381,14 +398,18 @@ write.csv(test, '../data/Titanic_test_clean.csv')
 
 ## 4.2. Normalitat i homogeneïtat de la variància
 
-**Age**
-
-Analitzarem la normalitat de la distribució de l'atribut *Age*, primer de manera gràfica i després amb el test d'Anderson-Darlings.
+Per fer les anàlisis de normalitat i homogeneïtat de la variància ens centrarem en els atributs de tipus *numeric*, que són *Age* i *Fare*. En primer lloc unirem els dos conjunts de dades en un mateix dataframe per faciltiar-ne l'estudi.
 
 ```{r}
 # Unim les dades en un dataframe
-test_and_train <- rbind(train[,-1],test)
+test_and_train <- rbind(train[c("Age","Fare")],test[c("Age","Fare")])
+```
 
+**Age**
+
+Analitzarem la normalitat de la distribució de l'atribut *Age*, primer de manera gràfica i després amb el test de Shapiro-Wilk.
+
+```{r}
 # Representem les dades en un histograma
 ggplot(data = test_and_train, aes(x = Age)) +
   geom_histogram(aes(y = ..density.., fill = ..count..)) +
@@ -408,21 +429,34 @@ qqline(test_and_train$Age)
 
 
 ```{r}
-library(nortest)
-alpha = 0.05 
-col.names = colnames(test_and_train)
-for (i in 1:ncol(test_and_train)) { 
-  if (i == 1) cat("Variables que no siguen una distribución normal:\n") 
-  if (is.integer(test_and_train[,i]) | is.numeric(test_and_train[,i])) { 
-    p_val = ad.test(test_and_train[,i])$p.value 
-    if (p_val < alpha) { 
-      cat(col.names[i])
-      # Format output 
-      if (i < ncol(test_and_train) - 1) cat(", ") 
-      if (i %% 3 == 0) cat("\n")
-    }
-  }
-}
+# Test de normalitat de Shapiro-Wilk
+shapiro.test(test_and_train$Age)
+```
+
+**Fare**
+
+```{r}
+# Representem les dades en un histograma
+ggplot(data = test_and_train, aes(x = Fare)) +
+  geom_histogram(aes(y = ..density.., fill = ..count..)) +
+  scale_fill_gradient(low = "#DCDCDC", high = "#7C7C7C") +
+  stat_function(fun = dnorm, colour = "firebrick",
+                args = list(mean = mean(test_and_train$Fare),
+                            sd = sd(test_and_train$Fare))) +
+  ggtitle("Histograma + curva normal") +
+  theme_bw()
+```
+
+
+```{r}
+qqnorm(test_and_train$Fare, pch = 19, col = "gray50")
+qqline(test_and_train$Fare)
+```
+
+
+```{r}
+# Test de normalitat de Shapiro-Wilk
+shapiro.test(test_and_train$Fare)
 ```
 
 ## 4.3. Proves estadístiques
@@ -430,8 +464,8 @@ for (i in 1:ncol(test_and_train)) {
 En aquest apartat analitzarem les dades des de tres punts de vista, intentant respondre tres preguntes diferents sobre les dades:
 
 * Quines variables numèriques influeixen més en la supervivència dels passatgers?
-* El sexe del passatger influeix en la seva probabilitat de sobreviure?
-* Quins passatgers del conjunt *test* tenen més probabilitats de sobreviure?
+* La probabilitat de sobreviure és significativament diferent entre les diferents categories?
+* Quina és la probabilitat de sobreviure per als passatgers del conjunt test?
 
 
 ### 4.3.1. Anàlisi de correlació
@@ -449,8 +483,22 @@ A la segona anàlisi ens preguntem si el sexe del passatger influeix en la seva 
 
 ### 4.3.3. Regressió logística
 
-Finalment, intentarem realitzar una predicció sobre la supervivència dels passatgers del conjunt *test*.
+Finalment, calcularem la probabilitat de supervivència per als passatgers del conjunt *test*. En el nostre cas, com que la variable a predir (dependent) és dicotòmica, utilitzarem una regressió logística. Per generar el model de regressió logística utilitzarem la funció *regLog* amb totes les variables disponibles, tant les categòriques com les numèriques. Les variables numèriques no requereixen cap tipus de transformació, però les categòriques s'hauran de binaritzar, és a dir, haurem de crear un atribut de tipus binari per a cada categoria; malgrat tot, la funció *regLog* ja realitza aquesta transformació i per tant no serà necessari modificar cap atribut.
 
+```{r}
+# Generem el model de regressió logística
+regLog <- glm(Survived ~ Pclass + Age + SibSp + Parch + Fare + Group + Sex + Cabin + Embarked + Title,
+              data = train, family = binomial(link="logit"))
+regLog$coefficients
+```
+
+Els coeficients obtinguts són els paràmetres de la funció que modelitza la probabilitat de supervivència per a cada atribut. A partir d'aquests paràmetres podem fer una predicció de la probabilitat de supervivència del conjunt *test* amb la funció *predict*.
+
+```{r}
+# Calculem la probabilitat de supervivència dels passatgers del conjunt test
+prob_Survived <- predict(regLog, test, type="response")
+cbind(test, prob_Survived)
+```
 
 # 5. Representació de dades
 
