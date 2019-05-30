@@ -486,8 +486,22 @@ cor(train[c("Survived","Pclass","Age","SibSp","Parch","Fare","Group")], method="
 
 ### 4.3.2. Contrast d'hipòtesis
 
-A la segona anàlisi ens preguntem si les diferents categories de les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) influeixen en la seva probabilitat de sobreviure.
+A la segona anàlisi ens preguntem si les diferents categories de les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) influeixen en la seva probabilitat de sobreviure. Atès a què la variable *Survived* és qualitativa, emprarem el test Chi quadrat amb la hipotesi nul·la que diu que les variables examinades no siguin independents.
+A L'execució podem veure com el p-valor és inferior al 0.05 a tots els casos pel que rebutjam la hipòtesi nul·la. Amb tota probabilitat hi ha una forta relació entre *Survived* i les columnes analitzades
 
+```{r}
+#obtenim la p-valor per a les columnes següents
+
+col_names =c( 'Survived','Sex', 'Cabin', 'Embarked','Title')
+
+
+for (col in col_names){
+  df_chi = xtabs(train[, c("Survived", col)])
+  print(df_chi)
+  print(chisq.test(df_chi))
+}
+
+```
 
 
 ### 4.3.3. Regressió logística
