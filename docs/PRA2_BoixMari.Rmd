@@ -170,7 +170,7 @@ Si ampliem la cerca i mostrem el valor d'*Embarked* per a tots els viatgers amb 
  summary(train[grep("113.*",train$Ticket),"Embarked"])
 
 # Assignem el valor 'S' als valors buits d'Embarked
-train[train$Embarked=='', "Embarked"] <- 'S'
+levels(train$Embarked) <- c("S", "C", "Q", "S")
 ```
 
 **Age**
@@ -341,6 +341,17 @@ L'atribut cabina conté més de 100 nivells. Una manera de reduir-los pot ser el
 # Extraiem la lletra de l'atribut Cabin
 levels(train$Cabin)[-1] <- sub("([A-T]).*","\\1", levels(train$Cabin)[-1])
 levels(test$Cabin)[-1] <- sub("([A-T]).*","\\1", levels(test$Cabin)[-1])
+
+# Freqüència de supervivents per cabina
+table(train[,c("Survived","Cabin")])
+```
+
+Com veiem, les cabines A, F, G i T tenen molt pocs passatgers i un percentatge de supervivents força semblant. Per evitar tenir cabines amb pocs registres i millorar l'eficàcia de les anàlisis unirem aquestes cabines en una mateixa categoria que anomenarem X.
+
+```{r}
+# Reanomenem a X les cabines A, F, G i T
+levels(train$Cabin) <- c("NO", "X", "B", "C", "D", "E", "X", "X", "X")
+levels(test$Cabin) <- c("NO", "X", "B", "C", "D", "E", "X", "X", "X")
 ```
 
 **Ticket**
@@ -404,9 +415,15 @@ La fase d'anàlisi s'enfocarà en estudiar les dades des de tres punts de vista 
 
 Per a respondre la primera pregunta treballarem sobre el conjunt *train*, que és l'únic que conté el valor de la variable objectiu (*Survived*), i estudiarem el grau de correlació entre *Survived* i la resta de variables quantitatives (*Pclass*, *Age*, *SibSp*, *Parch*, *Fare* i *Group*).
 
-La segona pregunta se centra en les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*). En aquesta anàlisi utilitzarem el contrast d'hipòtesis per comparar la variació de la mitjana de supervivents per a les diferents categories de cada variable. Per tant, per a la variable *Sex* que només conté dos valors (*male* i *female*) realitzarem una prova t de Student per comparar aquestes dues poblacions; mentre que per a la resta de variables (*Cabin*, *Embarked* i *Title*) farem un test ANOVA per comparar les diferents poblacions de cada categoria.
+La segona pregunta se centra en les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) on avaluarem si hi ha diferències significatives en el nombre de supervivents entre els diferents grups definits per aquestes variables. Per fer aquesta anàlisi utilitzarem el test de $\chi^2$ amb la funció *chisq.test*.
 
 Finalment, a la tercera pregunta treballarem amb el conjunt *train* per crear un model de regressió logística a partir de totes les variables, tant les numèriques com les categòriques. Aquest model l'utilitzarem per efectuar prediccions sobre el conjunt de *test*.
+
+```{r}
+# Seleccionem els grups de variables a analitzar
+var_num <- c("Pclass","Age","SibSp","Parch","Fare","Group")
+var_cat <- c("Sex","Cabin","Embarked","Title")
+```
 
 Abans de fer totes aquestes anàlisis comprovarem la normalitat i homocedasticitat de les variables quantitatives.
 
@@ -481,28 +498,25 @@ A la primera anàlisi ens preguntem quines variables numèriques influeixen més
 
 ```{r}
 # Correlació entre variables numèriques
-cor(train[c("Survived","Pclass","Age","SibSp","Parch","Fare","Group")], method="pearson")
+cor(train[c("Survived", var_num)], method="pearson")
 ```
 
 ### 4.3.2. Contrast d'hipòtesis
 
-A la segona anàlisi ens preguntem si les diferents categories de les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) influeixen en la seva probabilitat de sobreviure. Atès a què la variable *Survived* és qualitativa, emprarem el test Chi quadrat amb la hipotesi nul·la que diu que les variables examinades no siguin independents.
-A L'execució podem veure com el p-valor és inferior al 0.05 a tots els casos pel que rebutjam la hipòtesi nul·la. Amb tota probabilitat hi ha una forta relació entre *Survived* i les columnes analitzades
+A la segona anàlisi ens preguntem si les diferents categories de les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) influeixen en la probabilitat de sobreviure. Atès que la variable *Survived* també és qualitativa, emprarem el test *Chi quadrat* amb la hipotesi nul·la que diu que les variables examinades no són independents. Primer calcularem les freqüències de *Survived* per a cada categoria i després aplicarem la funció *chisq.test*.
 
 ```{r}
-#obtenim la p-valor per a les columnes següents
-
-col_names =c( 'Survived','Sex', 'Cabin', 'Embarked','Title')
-
-
-for (col in col_names){
-  df_chi = xtabs(train[, c("Survived", col)])
-  print(df_chi)
-  print(chisq.test(df_chi))
+# Test chi quadrat per a totes les variables qualitatives
+for (col in var_cat){
+  # Creem una taula de freqüències
+  taula = table(train[, c("Survived", col)])
+  print(taula)
+  # Apliquem el test
+  print(chisq.test(taula))
 }
-
 ```
 
+A L'execució podem veure com el p-valor és inferior al 0.05 en tots els casos, per tant, rebutgem la hipòtesi nul·la. Això vol dir que podem afirmar que hi ha diferències significatives entre el nombre de supervivents per a les diferents categories de *Sex*, *Cabin*, *Embarked* i *Title*.
 
 ### 4.3.3. Regressió logística
 
