@@ -23,6 +23,8 @@ library(ggplot2)
 library(plyr)
 ```
 
+------
+
 # 1. Descripció del dataset
 
 El dataset utilitzat en aquesta pràctica s'ha obtingut de la pàgina web de *Kaggle*  (https://www.kaggle.com/c/titanic) i conté les dades dels passatgers del Titanic durant el desastre del 1912. L'objectiu d'aquest conjunt de dades és realitzar una predicció sobre la supervivència d'alguns passatgers a partir de les seves característiques. Per tant, es tracta d'un problema de classificació d'aprenentatge supervisat, on cal construir un model capaç de determinar el valor de l'atribut *Survived* (variable objectiu o dependent) a partir de la resta d'atributs (variables independents). 
@@ -548,7 +550,7 @@ Els coeficients obtinguts són els paràmetres de la funció que modelitza la pr
 ```{r}
 # Calculem la probabilitat de supervivència dels passatgers del conjunt test
 prob_Survived <- predict(regLog, test, type="response")
-cbind(test, prob_Survived)
+head(cbind(test, prob_Survived),3)
 ```
 
 # 5. Representació de dades
