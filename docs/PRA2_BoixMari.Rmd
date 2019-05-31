@@ -112,7 +112,7 @@ summary(rbind(train[-1],test))
 
 ## 3.1. Elements buits
 
-Examinem els elements buits a les columnes dels dos conjunts de dades. Podem veure que tenim molts valors NA a la columna *Age* dels dos dataframes i un a la columna *Fare* del conjunt de test. 
+Per començar examinem els elements buits a les columnes dels dos conjunts de dades. Podem veure que tenim molts valors NA a la columna *Age* dels dos dataframes i un a la columna *Fare* del conjunt de test. 
 
 ```{r}
 # Nombre de valors NA per atribut
@@ -182,7 +182,6 @@ Finalment, per imputar el valor buit de l'edat (*Age*) farem servir el mètode b
 train$Age <- kNN(train[,-3], k=3)$Age 
 test$Age <- kNN(test[,-2], k=3)$Age 
 ```
-
 
 Per acabar, comprovem que ja no hi ha cap valor NA o buit.
 
@@ -304,7 +303,7 @@ A continuació transformarem alguns atributs per tal de reduir-ne el nombre de c
 
 **Name**
 
-A l'atribut *Name* n'extraurem el títol de tractament, ja que diferencia el seu estatus i pot influir en la supervivencia de l'individu.
+A l'atribut *Name* n'extraurem el títol de tractament, ja que indica l'estatus del viatger i pot influir en la seva supervivencia.
 
 ```{r}
 # Extraiem el títol de l'atribut Name
@@ -415,13 +414,15 @@ La fase d'anàlisi s'enfocarà en estudiar les dades des de tres punts de vista 
 
 Per a respondre la primera pregunta treballarem sobre el conjunt *train*, que és l'únic que conté el valor de la variable objectiu (*Survived*), i estudiarem el grau de correlació entre *Survived* i la resta de variables quantitatives (*Pclass*, *Age*, *SibSp*, *Parch*, *Fare* i *Group*).
 
-La segona pregunta se centra en les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) on avaluarem si hi ha diferències significatives en el nombre de supervivents entre els diferents grups definits per aquestes variables. Per fer aquesta anàlisi utilitzarem el test de $\chi^2$ amb la funció *chisq.test*.
+La segona pregunta se centra en les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) on avaluarem si hi ha diferències significatives en el percentatge de supervivents entre els diferents grups definits per aquestes variables. Per fer aquesta anàlisi utilitzarem el test de $\chi^2$ amb la funció *chisq.test*.
 
-Finalment, a la tercera pregunta treballarem amb el conjunt *train* per crear un model de regressió logística a partir de totes les variables, tant les numèriques com les categòriques. Aquest model l'utilitzarem per efectuar prediccions sobre el conjunt de *test*.
+Finalment, la tercera pregunta és un problema de classificació. Treballarem amb el conjunt *train* per crear un model de regressió logística a partir de totes les variables, tant les numèriques com les categòriques, i  l'utilitzarem per efectuar prediccions sobre el conjunt de *test*.
 
 ```{r}
-# Seleccionem els grups de variables a analitzar
+# Variables numèriques
 var_num <- c("Pclass","Age","SibSp","Parch","Fare","Group")
+
+# Variables categòriques
 var_cat <- c("Sex","Cabin","Embarked","Title")
 ```
 
@@ -452,6 +453,7 @@ ggplot(data = test_and_train, aes(x = Age)) +
   theme_bw()
 ```
 
+Com veiem, tot i que la majoria de franges d'edat s'acosten a una distribució normal, l'interval aproximat entre 18 i 25 anys és molt més freqüent que la resta i s'allunya molt d'aquesta distribució. La gràfica Q-Q segueix la línia de normalitat a la regió central però s'allunya als extrems.
 
 ```{r}
 qqnorm(test_and_train$Age, pch = 19, col = "gray50")
@@ -462,6 +464,12 @@ qqline(test_and_train$Age)
 ```{r}
 # Test de normalitat de Shapiro-Wilk
 shapiro.test(test_and_train$Age)
+```
+
+```{r}
+library(nortest)
+# Test de normalitat d'Anderson-Darling
+ad.test(test_and_train$Age)
 ```
 
 **Fare**
@@ -488,6 +496,12 @@ qqline(test_and_train$Fare)
 ```{r}
 # Test de normalitat de Shapiro-Wilk
 shapiro.test(test_and_train$Fare)
+```
+
+```{r}
+library(nortest)
+# Test de normalitat d'Anderson-Darling
+ad.test(test_and_train$Fare)
 ```
 
 ## 4.3. Proves estadístiques
