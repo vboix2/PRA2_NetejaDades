@@ -505,9 +505,20 @@ library(nortest)
 # Test de normalitat d'Anderson-Darling
 ad.test(test_and_train$Fare)
 ```
-### 4.2.2. Anàlisi d'homogeneitat de la variancia
+### 4.2.2. Anàlisi de les distribucions de *Age* i *Fare*
 
-Per tal de discriminar si la variància de les variables numèriques *Age* i *Flare*, és constant als grups de les persones que hi sobreviuen, respecte a les que no ho fan, es realitza l'anàlisi de l'homogeneïtat de la variància, com cap de les dues de les variables té una distribució normal es realitza el test Fligner-Killeen, que permet comparar les medianes de les variàncies en lloc de les mitjanes amb mostres de diferent grandària.
+Les variables *Age* i *Fare* presenten una important desviació respecte de la normal i no és possible la seva transformació mitjançant les tècniques habituals (log,sqrt...) pel que emprarem el test no paramètric de Kruskal-Wallis per analitzar la diferència de les seves mitjanes.
+En aquest test la hipòtesi nul·la contempla que les distribucions entre els grups són iguals.
+
+```{r}
+kruskal.test(Age  ~ Survived, data = train ) 
+kruskal.test(Fare  ~ Survived, data = train ) 
+```
+Com podem veure al resultat la distribuició d'edat dels que sobreviuen no és significativament diferent entre els que hi sobreviuen i els que no, al contrari que a la variable *Fare*, si és diferent.
+
+### 4.2.3. Anàlisi d'homogeneitat de la variancia
+
+Per tal de discriminar si la variància de les variables numèriques *Age* i *Fare*, és constant als grups de les persones que hi sobreviuen, respecte a les que no ho fan, es realitza l'anàlisi de l'homogeneïtat de la variància, com cap de les dues de les variables té una distribució normal es realitza el test Fligner-Killeen, que permet comparar les medianes de les variàncies en lloc de les mitjanes amb mostres de diferent grandària.
 En aquest test la hipòtesi nul·la contempla que les variàncies entre els grups són iguals.
 **Age**
 ```{r}
@@ -537,6 +548,9 @@ ggplot(data = train, aes(x = Survived.factor, y = Fare, colour = train$Survived.
   theme_bw() +
   theme(legend.position = "none")
 ```
+
+
+
 ## 4.3. Proves estadístiques
 
 ### 4.3.1. Anàlisi de correlació
