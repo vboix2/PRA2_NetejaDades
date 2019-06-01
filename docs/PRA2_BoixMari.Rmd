@@ -431,7 +431,7 @@ var_cat <- c("Sex","Cabin","Embarked","Title")
 Abans de fer totes aquestes anàlisis comprovarem la normalitat i homocedasticitat de les variables quantitatives.
 
 ## 4.2. Normalitat i homogeneïtat de la variància
-
+### 4.2.1 Normalitat
 Per fer les anàlisis de normalitat i homogeneïtat de la variància ens centrarem en els atributs de tipus *numeric*, que són *Age* i *Fare*. En primer lloc unirem els dos conjunts de dades en un mateix dataframe per facilitar-ne l'estudi.
 
 ```{r}
@@ -441,7 +441,7 @@ test_and_train <- rbind(train[c("Age","Fare")],test[c("Age","Fare")])
 
 **Age**
 
-En primer lloc, analitzarem la normalitat de la distribució de l'atribut *Age*, primer de manera gràfica i després amb el test de Shapiro-Wilk.
+En primer lloc, analitzarem la normalitat de la distribució de l'atribut *Age*, primer de manera gràfica i després amb el test de Shapiro-Wilk, com la mostra es relativament gran (|T| > 50), verificarem els resultats amb el test d'Anderson-Darlin.
 
 ```{r}
 # Representem les dades en un histograma
@@ -505,7 +505,38 @@ library(nortest)
 # Test de normalitat d'Anderson-Darling
 ad.test(test_and_train$Fare)
 ```
+### 4.2.2. Anàlisi d'homogeneitat de la variancia
 
+Per tal de discriminar si la variància de les variables numèriques *Age* i *Flare*, és constant als grups de les persones que hi sobreviuen, respecte a les que no ho fan, es realitza l'anàlisi de l'homogeneïtat de la variància, com cap de les dues de les variables té una distribució normal es realitza el test Fligner-Killeen, que permet comparar les medianes de les variàncies en lloc de les mitjanes amb mostres de diferent grandària.
+En aquest test la hipòtesi nul·la contempla que les variàncies entre els grups són iguals.
+**Age**
+```{r}
+a <- train[train$Survived == 0,"Age"]
+b <- train[train$Survived == 1,"Age"]
+fligner.test(x = list(a,b))
+```
+
+Com el p-valor resultat és més gran que 0.05 no hi ha una justificació per rebutjar la hipòtesi nul·la. Això ens indica que la variància de l'edat és similar en ambdós grups.
+**Fare**
+
+```{r}
+a <- train[train$Survived == 0,"Fare"]
+b <- train[train$Survived == 1,"Fare"]
+fligner.test(x = list(a,b))
+```
+Com el p-valor resultat és pràcticament 0, podem rebutjar la hipòtesi nul·la. Això ens indica que la variància de la variable *Fare* és significativament diferent en ambdós grups.
+Si observem els dos boxplots:
+
+```{r}
+#convertirm Survived a factor per a la correcta visualització i el guardem a una nova columna
+
+train$Survived.factor <- as.factor(train$Survived)
+ggplot(data = train, aes(x = Survived.factor, y = Fare, colour = train$Survived.factor)) +
+  geom_boxplot() +
+  geom_point() +
+  theme_bw() +
+  theme(legend.position = "none")
+```
 ## 4.3. Proves estadístiques
 
 ### 4.3.1. Anàlisi de correlació
@@ -520,6 +551,7 @@ cor(train[c("Survived", var_num)], method="pearson")
 ### 4.3.2. Contrast d'hipòtesis
 
 A la segona anàlisi ens preguntem si les diferents categories de les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) influeixen en la probabilitat de sobreviure. Atès que la variable *Survived* també és qualitativa, emprarem el test *Chi quadrat* amb la hipotesi nul·la que diu que les variables examinades no són independents. Primer calcularem les freqüències de *Survived* per a cada categoria i després aplicarem la funció *chisq.test*.
+
 
 ```{r}
 # Test chi quadrat per a totes les variables qualitatives
