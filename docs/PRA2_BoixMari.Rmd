@@ -653,6 +653,24 @@ treemap(df_for_treemap,index = c("Survived_pred","Sex", "Title", "Cabin"),
         align.labels = list(c("centre","centre"),c("left","top")))
 ```
 
+**Parallel set**
+```{r}
+library(ggforce)
+names(solution)[names(solution) == "Sex"] <- "DSex"
+names(solution)[names(solution) == "Title"] <- "CTitle"
+names(solution)[names(solution) == "Cabin"] <- "BCab"
+names(solution)[names(solution) == "Survived_pred"] <- "ASurv"
+
+data <- reshape2::melt(solution)
+data <- gather_set_data(data, c("DSex", "CTitle", "BCab", "ASurv"))
+
+ggplot(data, aes(x, id = id, split = y, value = value)) +
+  geom_parallel_sets(aes(fill = ASurv), alpha = 0.3, axis.width = 0.1) +
+  geom_parallel_sets_axes(axis.width = 0.2) +
+  geom_parallel_sets_labels(colour = 'white')
+```
+
+
 # 6. Resolució del problema
 
 # 7. Recursos
