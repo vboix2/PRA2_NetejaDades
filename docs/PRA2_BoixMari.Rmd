@@ -628,9 +628,29 @@ head(solution,5)
 
 
 # 5. Representació de dades
-```{r}
 
-treemap(solution,index = c("Category","Sub.Category"),vSize ="Sales",vColor = "Profit",type="value",palette="RdYlGn",range=c(-20000,60000),mapping=c(-20000,10000,60000),title = "Sales Treemap For categories",fontsize.labels = c(15,10),align.labels = list(c("centre","centre"),c("left","top")))
+Les variables més significatives per al model són Sex, Title, Cabin, Group. Agruparem per aquestes variables per a obtenir un dataframe preparat per un tree Map.
+
+```{r}
+library("reghelper")
+beta(regLog)
+
+#contem per Sex, Title, Cabin, Group i Fare.
+df_for_treemap <- count(solution, c("Survived_pred","Sex", "Title", "Cabin"))
+
+```
+```{r}
+library(treemap)
+treemap(df_for_treemap,index = c("Survived_pred","Sex", "Title", "Cabin"),
+        vSize ="freq",
+        vColor = "freq",
+        type="value",
+        palette="RdYlGn",
+        range=c(0,200),
+        mapping=c(0,200),
+        title = "Sales Treemap For categories",
+        fontsize.labels = c(15,10),
+        align.labels = list(c("centre","centre"),c("left","top")))
 ```
 
 # 6. Resolució del problema
