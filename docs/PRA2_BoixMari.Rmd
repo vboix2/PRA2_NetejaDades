@@ -590,16 +590,48 @@ regLog <- glm(Survived ~ Pclass + Age + SibSp + Parch + Fare + Group + Sex + Cab
               data = train, family = binomial(link="logit"))
 regLog$coefficients
 ```
+### 4.3.4 Avaluació del model
+A continuació cerquem el millor llindar per a prendre la decisió de quan sobreviu un individu donada la seva probabilitat.  
 
+```{r}
+# Calculem la probabilitat de supervivència dels passatgers del conjunt train per a obtenir la precissió del model
+prob_Survived <- predict(regLog, train, type="response")
+y_train <- cbind(train, prob_Survived)
+head(y_train,5)
+```
+Per a obtenir el llindar més adequat de probabilitat observem la corva de ROC. 
+```{R}
+library(ROCR)
+library(pROC)
+plot.roc(y_train$Survived, y_train$prob_Survived,  main="Confidence interval of a threshold", percent=TRUE,  ci=TRUE, of="thresholds", # compute AUC (of threshold)  
+thresholds="best", # select the (best) threshold  
+print.thres="best") # also highlight this threshold on the plot 
+```
+Assignem el llindar a 0.5 obtingut a la corba.
+```{r}
+library(gmodels)
+y_train$Survived_pred <- ifelse(y_train$prob_Survived>0.5, 1,0)
+y_train$Survived_pred<-factor(y_train$Survived_pred)
+CrossTable(y_train$Survived,y_train$Survived_pred)
+```
+
+### 4.3.4 Generació de la predicció
 Els coeficients obtinguts són els paràmetres de la funció que modelitza la probabilitat de supervivència per a cada atribut. A partir d'aquests paràmetres podem fer una predicció de la probabilitat de supervivència del conjunt *test* amb la funció *predict*.
-
 ```{r}
 # Calculem la probabilitat de supervivència dels passatgers del conjunt test
 prob_Survived <- predict(regLog, test, type="response")
-head(cbind(test, prob_Survived),3)
+solution <- cbind(test, prob_Survived)
+solution$Survived_pred <- ifelse(solution$prob_Survived>0.5, 1,0)
+solution$Survived_pred<-factor(solution$Survived_pred)
+head(solution,5)
 ```
 
+
 # 5. Representació de dades
+```{r}
+
+treemap(solution,index = c("Category","Sub.Category"),vSize ="Sales",vColor = "Profit",type="value",palette="RdYlGn",range=c(-20000,60000),mapping=c(-20000,10000,60000),title = "Sales Treemap For categories",fontsize.labels = c(15,10),align.labels = list(c("centre","centre"),c("left","top")))
+```
 
 # 6. Resolució del problema
 
