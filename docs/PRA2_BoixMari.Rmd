@@ -676,47 +676,56 @@ head(solution,5)
 
 # 5. Representació de dades
 
-Les variables més significatives per al model són Sex, Title, Cabin, Group. Agruparem per aquestes variables per a obtenir un dataframe preparat per un tree Map.
+A partir dels coeficients normalitzats de la regressió logística obtindrem les variables més significatives. Amb la funció *beta* normalitzem els coeficients i podem veure que Sex, Title, Cabin, Group, Fare i Embarked, són les més significatives. 
 
 ```{r}
 library("reghelper")
 beta(regLog)
-
-#contem per Sex, Title, Cabin, Group i Fare.
-df_for_treemap <- count(solution, c("Survived_pred","Sex", "Title", "Cabin"))
-
 ```
-```{r}
-library(treemap)
-treemap(df_for_treemap,index = c("Survived_pred","Sex", "Title", "Cabin"),
-        vSize ="freq",
-        vColor = "freq",
-        type="value",
-        palette="RdYlGn",
-        range=c(0,200),
-        mapping=c(0,200),
-        title = "Sales Treemap For categories",
-        fontsize.labels = c(15,10),
-        align.labels = list(c("centre","centre"),c("left","top")))
-```
+Obtenim una visió general de tot el dataframe de la solució del problema amb un gràfic de conjunts paral·lels. 
+El diagrama mostra clarament que hi ha menys homes que sobreviuen, probablement perquè els primers a evacuar el vaixell foren Dones i nins.  
+També podem veure que un gruix important dels que no sobreviuen no tenen assignat una cabina, probablement viatjaven a les bodegues del vaixell. 
 
-**Parallel set**
 ```{r}
 library(ggforce)
-names(solution)[names(solution) == "Sex"] <- "DSex"
-names(solution)[names(solution) == "Title"] <- "CTitle"
-names(solution)[names(solution) == "Cabin"] <- "BCab"
-names(solution)[names(solution) == "Survived_pred"] <- "ASurv"
+names(solution)[names(solution) == "Sex"] <- "C_Sex"
+names(solution)[names(solution) == "Title"] <- "D_Title"
+names(solution)[names(solution) == "Embarked"] <- "B_Embarked"
+names(solution)[names(solution) == "Cabin"] <- "A_Cab"
+names(solution)[names(solution) == "Survived_pred"] <- "E_Surv"
 
 data <- reshape2::melt(solution)
-data <- gather_set_data(data, c("DSex", "CTitle", "BCab", "ASurv"))
+data <- gather_set_data(data, c("C_Sex", "D_Title", "B_Embarked", "A_Cab" , "E_Surv"))
 
 ggplot(data, aes(x, id = id, split = y, value = value)) +
-  geom_parallel_sets(aes(fill = ASurv), alpha = 0.3, axis.width = 0.1) +
+  geom_parallel_sets(aes(fill = E_Surv), alpha = 0.3, axis.width = 0.1) +
   geom_parallel_sets_axes(axis.width = 0.2) +
   geom_parallel_sets_labels(colour = 'white')
 ```
 
+**Piràmide segons *Fare*
+Analitzem el comportament depenent de *Fare. Amb una piràmide, representem les persones que hi sobreviuen a l'esquerra del 0 i els que no ho fan, a la dreta. Al gràfic veiem clarament que el grup de (0,10] és el més nombrós, però no és fàcil veure que percentualment sigui el que té la probabilitat més alta de no sobreviure, de fet, *Fare* és de les variables significatives amb menys pes, en canvi, de nou es veu que el percentatge de dones que hi sobreviuen és més alt que el dels homes, llevat del grup que va pagar (30,40]
+
+```{R}
+library(magrittr)
+
+piramid_solution <- solution[, c("Fare","E_Surv","C_Sex")]
+piramid_solution$Fare <- cut(piramid_solution$Fare, seq(-0,100,by=10))
+piramid_solution <- count(piramid_solution, c("Fare","C_Sex","E_Surv"))
+
+
+ggplot(data = piramid_solution, aes(x = Fare, y = freq, fill = C_Sex )) +
+  #bars for all but 2100
+  geom_bar(data = subset(piramid_solution, E_Surv == 0),
+           stat = "identity",
+           position = "identity") +
+  geom_bar(data = subset(piramid_solution, E_Surv == 1) ,
+           stat = "identity",
+           position = "identity",
+           mapping = aes(y = -freq)) +
+        coord_flip() + 
+  scale_y_continuous(labels = abs)
+```
 
 # 6. Resolució del problema
 
