@@ -21,6 +21,7 @@ library(data.table)
 library(VIM)
 library(ggplot2)
 library(plyr)
+library(nortest)
 ```
 
 ------
@@ -97,10 +98,17 @@ train[,'Name'] <- as.character(train[,'Name'])
 test[,'Name'] <- as.character(test[,'Name'])
 ```
 
+La variable *Survived* és l'atribut classe i, per tant, és de tipus categòric. En aquest cas farem la conversió a factor.
+
+```{r}
+# Conversió de Survived a factor
+train[,"Survived"] <- as.factor(train[,"Survived"])
+```
+
 Els tipus de dada per a cada atribut són:
 
-* *Factor*: Sex, Ticket, Cabin, Embarked
-* *int*: Survived, Pclass, SibSp, Parch
+* *Factor*: Sex, Ticket, Cabin, Embarked, Survived
+* *int*: Pclass, SibSp, Parch
 * *num*: Age, Fare
 * *chr*: Name
 
@@ -312,10 +320,6 @@ A l'atribut *Name* n'extraurem el títol de tractament, ja que indica l'estatus 
 train$Title <- sub(".*\\s([A-Za-z]+)\\..*", "\\1", train$Name)
 test$Title <- sub(".*\\s([A-Za-z]+)\\..*", "\\1", test$Name)
 
-# Eliminem l'atribut Name perquè ja no ens serà útil
-train <- train[,-3]
-test <- test[,-2]
-
 # Nombre de registres per categoria de Title
 table(c(train$Title, test$Title))
 ```
@@ -377,10 +381,6 @@ colnames(tickets) <- c("Ticket","Group")
 # Assignem el valor de la freqüència a un nou atribut "Group"
 train <- join(train, tickets, by="Ticket")
 test <- join(test, tickets, by="Ticket")
-
-# Eliminem l'atribut Ticket
-train <- train[-7]
-test <- test[-6]
 ```
 
 **Fare**
@@ -391,6 +391,14 @@ Finalment, com que el preu del bitllet sembla ser el mateix per a cada ticket, �
 # Càlcul del preu individual del bitllet
 train$Fare <- train$Fare / train$Group 
 test$Fare <- test$Fare / test$Group
+```
+
+Per acabar, eliminem els atributs *Name* i *Ticket* per evitar la redundància de dades, ja que els hem utilitzat per generar els atributs derivats *Title* i *Group*.
+
+```{r}
+# Eliminem l'atribut Name i Ticket
+train <- train[,-c(3,8)]
+test <- test[,-c(2,7)]
 ```
 
 
@@ -408,17 +416,20 @@ write.csv(test, '../data/Titanic_test_clean.csv')
 
 ## 4.1. Selecció de dades
 
-La fase d'anàlisi s'enfocarà en estudiar les dades des de tres punts de vista i intentant respondre tres preguntes diferents:
+La fase d'anàlisi s'enfocarà en estudiar les dades des de diferents punts de vista i intentant respondre diferents preguntes:
 
-1. Quines variables numèriques influeixen més en la supervivència dels passatgers?
-2. La probabilitat de sobreviure és significativament diferent entre les diferents categories?
-3. Quina és la probabilitat de sobreviure per als passatgers del conjunt de test?
+1. Com és la distribució de valors per a les variables numèriques contínues? La mitjana de valors és significativament diferent per als supervivents i no supervivents?
+2. Hi ha correlacions entre variables numèriques que permetin prescindir d'algun atribut?
+3. La probabilitat de sobreviure és significativament diferent entre les diferents categories?
+4. Quina és la probabilitat de sobreviure per als passatgers del conjunt de test?
 
-Per a respondre la primera pregunta treballarem sobre el conjunt *train*, que és l'únic que conté el valor de la variable objectiu (*Survived*), i estudiarem el grau de correlació entre *Survived* i la resta de variables quantitatives (*Pclass*, *Age*, *SibSp*, *Parch*, *Fare* i *Group*).
+La primera pregunta estudia la distribució de les variables numèriques contínues (*Age* i *Fare*). Començarem estudiant si els seus valors segueixen una distribució normal, a continuació compararem la variància en funció del valors de la classe (*Survived*) i, finalment, aprofitarem aquest resultat per comparar la mitjana de valors en funció del valor de la classe (*Survived*). Això ens permetrà saber si la mitjana d'edat i del preu del bitllet són significativament diferents entre els supervivents i els no supervivents.
 
-La segona pregunta se centra en les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) on avaluarem si hi ha diferències significatives en el percentatge de supervivents entre els diferents grups definits per aquestes variables. Per fer aquesta anàlisi utilitzarem el test de $\chi^2$ amb la funció *chisq.test*.
+Per a respondre la segona pregunta estudiarem la correlació entre les variables quantitatives (*Pclass*, *Age*, *SibSp*, *Parch*, *Fare* i *Group*). En principi es tracta de les variables independents del conjunt de dades, per aquest motiu, si detectem alguna dependència important significarà que hi ha redundància en les dades i pot ser necessari eliminar alguna columna. Per fer aquesta anàlisi treballarem amb els dos conjunts de dades: *train* i *test*.
 
-Finalment, la tercera pregunta és un problema de classificació. Treballarem amb el conjunt *train* per crear un model de regressió logística a partir de totes les variables, tant les numèriques com les categòriques, i  l'utilitzarem per efectuar prediccions sobre el conjunt de *test*.
+La tercera pregunta se centra en les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) on avaluarem si hi ha diferències significatives en el percentatge de supervivents entre els diferents grups definits per aquestes variables. Per fer aquesta anàlisi utilitzarem el test de $\chi^2$ amb la funció *chisq.test*, també sobre les dades de *train*.
+
+Finalment, la darrera pregunta és un problema de classificació. Treballarem amb el conjunt *train* per crear un model de regressió logística a partir de totes les variables, tant les numèriques com les categòriques, i  l'utilitzarem per efectuar prediccions sobre el conjunt de *test*.
 
 ```{r}
 # Variables numèriques
@@ -430,8 +441,8 @@ var_cat <- c("Sex","Cabin","Embarked","Title")
 
 Abans de fer totes aquestes anàlisis comprovarem la normalitat i homocedasticitat de les variables quantitatives.
 
-## 4.2. Normalitat i homogeneïtat de la variància
-### 4.2.1 Normalitat
+## 4.2. Anàlisi de la distribució de variables contínues Age i Fare
+
 Per fer les anàlisis de normalitat i homogeneïtat de la variància ens centrarem en els atributs de tipus *numeric*, que són *Age* i *Fare*. En primer lloc unirem els dos conjunts de dades en un mateix dataframe per facilitar-ne l'estudi.
 
 ```{r}
@@ -439,14 +450,16 @@ Per fer les anàlisis de normalitat i homogeneïtat de la variància ens centrar
 test_and_train <- rbind(train[c("Age","Fare")],test[c("Age","Fare")])
 ```
 
+### 4.2.1 Normalitat
+
 **Age**
 
-En primer lloc, analitzarem la normalitat de la distribució de l'atribut *Age*, primer de manera gràfica i després amb el test de Shapiro-Wilk, com la mostra es relativament gran (|T| > 50), verificarem els resultats amb el test d'Anderson-Darlin.
+Començarem analitzant la normalitat de la distribució de l'atribut *Age* de manera gràfica, representant les dades en un histograma i utilitzant la gràfica Q-Q.
 
 ```{r}
 # Representem les dades en un histograma
 ggplot(data = test_and_train, aes(x = Age)) +
-  geom_histogram(aes(y = ..density.., fill = ..count..)) +
+  geom_histogram(aes(y = ..density.., fill = ..count..), binwidth = 3) +
   scale_fill_gradient(low = "#DCDCDC", high = "#7C7C7C") +
   stat_function(fun = dnorm, colour = "firebrick",
                 args = list(mean = mean(test_and_train$Age),
@@ -455,31 +468,35 @@ ggplot(data = test_and_train, aes(x = Age)) +
   theme_bw()
 ```
 
-Com veiem, tot i que la majoria de franges d'edat s'acosten a una distribució normal, l'interval aproximat entre 18 i 25 anys és molt més freqüent que la resta i s'allunya molt d'aquesta distribució. La gràfica Q-Q segueix la línia de normalitat a la regió central però s'allunya als extrems.
+Tot i que la majoria de franges d'edat s'acosten a una distribució normal, l'interval aproximat entre 18 i 25 anys és molt més freqüent que la resta i s'allunya molt d'aquesta distribució. Com veiem a continuació, la gràfica Q-Q segueix la línia de normalitat a la regió central però s'allunya als extrems.
 
 ```{r}
 qqnorm(test_and_train$Age, pch = 19, col = "gray50")
 qqline(test_and_train$Age)
 ```
 
+Per tal d'avaluar la normalitat de la distribució de manera numèrica utilitzarem el contrast d'hipòtesis. En primer lloc farem el test de Shapiro-Wilk. Prenent com a hipòtesi nul·la que la distribució de valors d'*Age* és normal i fixant un nivell de significació del 5%, veiem com el càlcul del p-valor és molt inferior al nivell de significació i ens veiem obligats a rebutjar la hipòtesi nul·la; és a dir, no podem afirmar que la distribució d'*Age* sigui normal.
 
 ```{r}
 # Test de normalitat de Shapiro-Wilk
 shapiro.test(test_and_train$Age)
 ```
 
+Com que es tracta d'una mostra relativament gran (|T| > 50), verificarem els resultats amb el test d'Anderson-Darling. Els resultats també ens diuen que no podem considerar que la distribució d'edats segueixi una corba normal.
+
 ```{r}
-library(nortest)
 # Test de normalitat d'Anderson-Darling
 ad.test(test_and_train$Age)
 ```
 
 **Fare**
 
+A continuació repetim les gràfiques i els càlculs per avaluar la normalitat de l'atribut *Fare*.
+
 ```{r}
 # Representem les dades en un histograma
 ggplot(data = test_and_train, aes(x = Fare)) +
-  geom_histogram(aes(y = ..density.., fill = ..count..)) +
+  geom_histogram(aes(y = ..density.., fill = ..count..), binwidth = 3) +
   scale_fill_gradient(low = "#DCDCDC", high = "#7C7C7C") +
   stat_function(fun = dnorm, colour = "firebrick",
                 args = list(mean = mean(test_and_train$Fare),
@@ -494,6 +511,7 @@ qqnorm(test_and_train$Fare, pch = 19, col = "gray50")
 qqline(test_and_train$Fare)
 ```
 
+A nivell gràfic, els valors de *Fare* tampoc semblen seguir una distribució normal. Això ho confirmem amb els tests de Shapiro-Wilk i d'Anderson-Darling.
 
 ```{r}
 # Test de normalitat de Shapiro-Wilk
@@ -505,7 +523,45 @@ library(nortest)
 # Test de normalitat d'Anderson-Darling
 ad.test(test_and_train$Fare)
 ```
-### 4.2.2. Anàlisi de les distribucions de *Age* i *Fare*
+
+En tots dos casos el càlcul del p-valor resulta molt inferior al nivell de significació i, per tant, no podem afirmar que els valors de l'atribut *Fare* segueixin una distribució normal.
+
+
+### 4.2.2. Homoscedasticitat
+
+A continuació estudiarem si la variància de les variables numèriques *Age* i *Fare* és constant als grups de les persones que sobreviuen respecte a les que no ho fan. Com que cap de les dues de les variables té una distribució normal utiltizarem el test Fligner-Killeen. En aquest test la hipòtesi nul·la contempla que les variàncies entre els grups són iguals.
+
+**Age**
+
+```{r}
+a <- train[train$Survived == 0,"Age"]
+b <- train[train$Survived == 1,"Age"]
+fligner.test(x = list(a,b))
+```
+
+Com el p-valor resultat és més gran que 0.05 no hi ha una justificació per rebutjar la hipòtesi nul·la. Això ens indica que la variància de l'edat és similar en ambdós grups.
+
+
+**Fare**
+
+```{r}
+a <- train[train$Survived == 0,"Fare"]
+b <- train[train$Survived == 1,"Fare"]
+fligner.test(x = list(a,b))
+```
+
+Com el p-valor resultat és pràcticament 0, podem rebutjar la hipòtesi nul·la. Això ens indica que la variància de la variable *Fare* és significativament diferent en ambdós grups. Aquest resultat el podem comprovar gràficament mostrant la distribució de valors per a les dues classes en un diagrama de caixa.
+
+```{r}
+# Diagrama de caixa de Fare per a les classes de Survived
+ggplot(data = train, aes(x = Survived, y = Fare, colour = train$Survived)) +
+  geom_boxplot() +
+  geom_point() +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+### 4.2.3. Anàlisi de les distribucions d'*Age* i *Fare*
 
 Les variables *Age* i *Fare* presenten una important desviació respecte de la normal i no és possible la seva transformació mitjançant les tècniques habituals (log,sqrt...) pel que emprarem el test no paramètric de Kruskal-Wallis per analitzar la diferència de les seves mitjanes.
 En aquest test la hipòtesi nul·la contempla que les distribucions entre els grups són iguals.
@@ -516,44 +572,7 @@ kruskal.test(Fare  ~ Survived, data = train )
 ```
 Com podem veure al resultat la distribuició d'edat dels que sobreviuen no és significativament diferent entre els que hi sobreviuen i els que no, al contrari que a la variable *Fare*, si és diferent.
 
-### 4.2.3. Anàlisi d'homogeneitat de la variancia
-
-Per tal de discriminar si la variància de les variables numèriques *Age* i *Fare*, és constant als grups de les persones que hi sobreviuen, respecte a les que no ho fan, es realitza l'anàlisi de l'homogeneïtat de la variància, com cap de les dues de les variables té una distribució normal es realitza el test Fligner-Killeen, que permet comparar les medianes de les variàncies en lloc de les mitjanes amb mostres de diferent grandària.
-En aquest test la hipòtesi nul·la contempla que les variàncies entre els grups són iguals.
-**Age**
-```{r}
-a <- train[train$Survived == 0,"Age"]
-b <- train[train$Survived == 1,"Age"]
-fligner.test(x = list(a,b))
-```
-
-Com el p-valor resultat és més gran que 0.05 no hi ha una justificació per rebutjar la hipòtesi nul·la. Això ens indica que la variància de l'edat és similar en ambdós grups.
-**Fare**
-
-```{r}
-a <- train[train$Survived == 0,"Fare"]
-b <- train[train$Survived == 1,"Fare"]
-fligner.test(x = list(a,b))
-```
-Com el p-valor resultat és pràcticament 0, podem rebutjar la hipòtesi nul·la. Això ens indica que la variància de la variable *Fare* és significativament diferent en ambdós grups.
-Si observem els dos boxplots:
-
-```{r}
-#convertirm Survived a factor per a la correcta visualització i el guardem a una nova columna
-
-train$Survived.factor <- as.factor(train$Survived)
-ggplot(data = train, aes(x = Survived.factor, y = Fare, colour = train$Survived.factor)) +
-  geom_boxplot() +
-  geom_point() +
-  theme_bw() +
-  theme(legend.position = "none")
-```
-
-
-
-## 4.3. Proves estadístiques
-
-### 4.3.1. Anàlisi de correlació
+### 4.3. Anàlisi de correlació
 
 A la primera anàlisi ens preguntem quines variables numèriques influeixen més en la supervivència dels passatgers. Per respondre-la utilitzarem un anàlisi de correlació entre les diferents variables quantitatives per al conjunt *train*, que és l'únic que conté l'atribut *Survived*. Per mesurar el grau de correlació utilitzarem el coeficient de *Pearson*.
 
@@ -562,7 +581,8 @@ A la primera anàlisi ens preguntem quines variables numèriques influeixen més
 cor(train[c("Survived", var_num)], method="pearson")
 ```
 
-### 4.3.2. Contrast d'hipòtesis
+
+### 4.4. Contrast d'hipòtesis
 
 A la segona anàlisi ens preguntem si les diferents categories de les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) influeixen en la probabilitat de sobreviure. Atès que la variable *Survived* també és qualitativa, emprarem el test *Chi quadrat* amb la hipotesi nul·la que diu que les variables examinades no són independents. Primer calcularem les freqüències de *Survived* per a cada categoria i després aplicarem la funció *chisq.test*.
 
@@ -580,7 +600,7 @@ for (col in var_cat){
 
 A L'execució podem veure com el p-valor és inferior al 0.05 en tots els casos, per tant, rebutgem la hipòtesi nul·la. Això vol dir que podem afirmar que hi ha diferències significatives entre el nombre de supervivents per a les diferents categories de *Sex*, *Cabin*, *Embarked* i *Title*.
 
-### 4.3.3. Regressió logística
+### 4.5. Regressió logística
 
 Finalment, calcularem la probabilitat de supervivència per als passatgers del conjunt *test*. En el nostre cas, com que la variable a predir (dependent) és dicotòmica, utilitzarem una regressió logística. Per generar el model de regressió logística utilitzarem la funció *regLog* amb totes les variables disponibles, tant les categòriques com les numèriques. Les variables numèriques no requereixen cap tipus de transformació, però les categòriques s'hauran de binaritzar, és a dir, haurem de crear un atribut de tipus binari per a cada categoria; malgrat tot, la funció *regLog* ja realitza aquesta transformació i per tant no serà necessari modificar cap atribut.
 
