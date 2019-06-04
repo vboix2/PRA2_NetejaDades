@@ -22,6 +22,9 @@ library(VIM)
 library(ggplot2)
 library(plyr)
 library(nortest)
+library(ROCR)
+library(pROC)
+library(gmodels)
 ```
 
 ------
@@ -561,31 +564,35 @@ ggplot(data = train, aes(x = Survived, y = Fare, colour = train$Survived)) +
   theme(legend.position = "none")
 ```
 
-### 4.2.3. Anàlisi de les distribucions d'*Age* i *Fare*
+### 4.2.3. Comparació de les mitjanes d'*Age* i *Fare*
 
-Les variables *Age* i *Fare* presenten una important desviació respecte de la normal i no és possible la seva transformació mitjançant les tècniques habituals (log,sqrt...) pel que emprarem el test no paramètric de Kruskal-Wallis per analitzar la diferència de les seves mitjanes.
+Les variables *Age* i *Fare* presenten una important desviació respecte de la normal i no és possible la seva transformació mitjançant les tècniques habituals (log, sqrt...) pel que emprarem el test no paramètric de Kruskal-Wallis per analitzar la diferència de les seves mitjanes.
 En aquest test la hipòtesi nul·la contempla que les distribucions entre els grups són iguals.
 
 ```{r}
+# Test de Kruskal-Wallis aplicat a Age respecte Survived
 kruskal.test(Age  ~ Survived, data = train ) 
+
+# Test de Kruskal-Wallis aplicat a Fare respecte Survived
 kruskal.test(Fare  ~ Survived, data = train ) 
 ```
+
 Com podem veure al resultat la distribuició d'edat dels que sobreviuen no és significativament diferent entre els que hi sobreviuen i els que no, al contrari que a la variable *Fare*, si és diferent.
 
-### 4.3. Anàlisi de correlació
+## 4.3. Anàlisi de correlació
 
-A la primera anàlisi ens preguntem quines variables numèriques influeixen més en la supervivència dels passatgers. Per respondre-la utilitzarem un anàlisi de correlació entre les diferents variables quantitatives per al conjunt *train*, que és l'únic que conté l'atribut *Survived*. Per mesurar el grau de correlació utilitzarem el coeficient de *Pearson*.
+En aquest apartat ens preguntem si hi ha correlacions entre variables numèriques que permetin prescindir d'algun atribut. Per analitzar les possibles dependències generarem una matriu de correlacions entre totes les variables quantitatives dels conjunts de dades *train* i *test* conjuntament; a més, utilitzarem la correlació de *Spearman*, que no suposa cap tipus de distribució entre les dades, perquè com hem vist hi ha variables numèriques que no segueixen una distribució normal.
 
 ```{r}
 # Correlació entre variables numèriques
-cor(train[c("Survived", var_num)], method="pearson")
+cor(rbind(train[var_num], test[var_num]), method="spearman")
 ```
 
+Com era d'esperar, hi ha una forta correlació entre els atributs *Fare* i *Pclass*; el coeficient de *Spearman* és de -0.83, força proper a -1, que vol dir que a classes més altes (valors més petits) augmenta el preu del bitllet i a l'inversa. A més, també s'aprecia una correlació positiva entre *Group-Parch* (0.64) i *Group-SibSp* (0.61) perquè tots aquests atributs informen de la mida de la família o grup de gent que viatjava conjuntament. Altres correlacions menys importants són *Age-Pclass* (-0,41), classes més altes (valors petits de Pclass) tenen edats més grans, i *SibSp-Parch* (0.43).
 
-### 4.4. Contrast d'hipòtesis
+## 4.4. Contrast d'hipòtesis
 
-A la segona anàlisi ens preguntem si les diferents categories de les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) influeixen en la probabilitat de sobreviure. Atès que la variable *Survived* també és qualitativa, emprarem el test *Chi quadrat* amb la hipotesi nul·la que diu que les variables examinades no són independents. Primer calcularem les freqüències de *Survived* per a cada categoria i després aplicarem la funció *chisq.test*.
-
+A la tercera pregunta ens qüestionem si les diferents categories de les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) influeixen en la probabilitat de sobreviure. Atès que la variable *Survived* també és qualitativa, emprarem el test *Chi quadrat* amb la hipotesi nul·la que diu que les variables examinades no són independents. Primer calcularem les freqüències de *Survived* per a cada categoria i després aplicarem la funció *chisq.test*.
 
 ```{r}
 # Test chi quadrat per a totes les variables qualitatives
@@ -600,9 +607,13 @@ for (col in var_cat){
 
 A L'execució podem veure com el p-valor és inferior al 0.05 en tots els casos, per tant, rebutgem la hipòtesi nul·la. Això vol dir que podem afirmar que hi ha diferències significatives entre el nombre de supervivents per a les diferents categories de *Sex*, *Cabin*, *Embarked* i *Title*.
 
-### 4.5. Regressió logística
+## 4.5. Regressió logística
 
-Finalment, calcularem la probabilitat de supervivència per als passatgers del conjunt *test*. En el nostre cas, com que la variable a predir (dependent) és dicotòmica, utilitzarem una regressió logística. Per generar el model de regressió logística utilitzarem la funció *regLog* amb totes les variables disponibles, tant les categòriques com les numèriques. Les variables numèriques no requereixen cap tipus de transformació, però les categòriques s'hauran de binaritzar, és a dir, haurem de crear un atribut de tipus binari per a cada categoria; malgrat tot, la funció *regLog* ja realitza aquesta transformació i per tant no serà necessari modificar cap atribut.
+Finalment, calcularem la probabilitat de supervivència per als passatgers del conjunt *test*. En el nostre cas, com que la variable a predir (dependent) és dicotòmica, utilitzarem una regressió logística.
+
+### 4.5.1. Creació del model
+
+Per generar el model de regressió logística utilitzarem la funció *regLog* amb totes les variables disponibles, tant les categòriques com les numèriques. Les variables numèriques no requereixen cap tipus de transformació, però les categòriques s'hauran de binaritzar, és a dir, haurem de crear un atribut de tipus binari per a cada categoria; malgrat tot, la funció *regLog* ja realitza aquesta transformació i per tant no serà necessari modificar cap atribut. 
 
 ```{r}
 # Generem el model de regressió logística
@@ -610,39 +621,55 @@ regLog <- glm(Survived ~ Pclass + Age + SibSp + Parch + Fare + Group + Sex + Cab
               data = train, family = binomial(link="logit"))
 regLog$coefficients
 ```
-### 4.3.4 Avaluació del model
+
+
+### 4.5.2. Avaluació del model
+
 A continuació cerquem el millor llindar per a prendre la decisió de quan sobreviu un individu donada la seva probabilitat.  
 
 ```{r}
-# Calculem la probabilitat de supervivència dels passatgers del conjunt train per a obtenir la precissió del model
+# Calculem la probabilitat de supervivència dels passatgers del conjunt train
 prob_Survived <- predict(regLog, train, type="response")
 y_train <- cbind(train, prob_Survived)
 head(y_train,5)
 ```
-Per a obtenir el llindar més adequat de probabilitat observem la corva de ROC. 
+
+Per a obtenir el llindar més adequat de probabilitat observem la corba ROC. 
+
 ```{R}
-library(ROCR)
-library(pROC)
-plot.roc(y_train$Survived, y_train$prob_Survived,  main="Confidence interval of a threshold", percent=TRUE,  ci=TRUE, of="thresholds", # compute AUC (of threshold)  
-thresholds="best", # select the (best) threshold  
-print.thres="best") # also highlight this threshold on the plot 
-```
-Assignem el llindar a 0.5 obtingut a la corba.
-```{r}
-library(gmodels)
-y_train$Survived_pred <- ifelse(y_train$prob_Survived>0.5, 1,0)
-y_train$Survived_pred<-factor(y_train$Survived_pred)
-CrossTable(y_train$Survived,y_train$Survived_pred)
+# Corba ROC del conjunt train
+plot.roc(y_train$Survived, y_train$prob_Survived,  
+         main="Confidence interval of a threshold",
+         percent=TRUE,  ci=TRUE, of="thresholds",
+         thresholds="best", 
+         print.thres="best")
 ```
 
-### 4.3.4 Generació de la predicció
+Assignem el llindar a 0.5 obtingut a la corba.
+
+```{r}
+# Assignem com supervivents les probabilitats superiors al 50%
+y_train$Survived_pred <- ifelse(y_train$prob_Survived>0.5, 1,0)
+# Convertim les prediccions atipus factor
+y_train$Survived_pred <- as.factor(y_train$Survived_pred)
+# Mostrem la matriu de confusió
+gmodels::CrossTable(y_train$Survived,y_train$Survived_pred)
+```
+
+### 4.5.3. Predicció del conjunt test
+
 Els coeficients obtinguts són els paràmetres de la funció que modelitza la probabilitat de supervivència per a cada atribut. A partir d'aquests paràmetres podem fer una predicció de la probabilitat de supervivència del conjunt *test* amb la funció *predict*.
+
 ```{r}
 # Calculem la probabilitat de supervivència dels passatgers del conjunt test
 prob_Survived <- predict(regLog, test, type="response")
+# Afegim la predicció al conjunt de dades
 solution <- cbind(test, prob_Survived)
+# Assignem com a supervivents els passatgers amb probabilitats superiors al 50%
 solution$Survived_pred <- ifelse(solution$prob_Survived>0.5, 1,0)
-solution$Survived_pred<-factor(solution$Survived_pred)
+# Convertim la predicció a tipus factor
+solution$Survived_pred<-as.factor(solution$Survived_pred)
+# Mostrem els resultats per als primers registres
 head(solution,5)
 ```
 
