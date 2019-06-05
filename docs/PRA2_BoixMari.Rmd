@@ -21,9 +21,6 @@ library(data.table)
 library(VIM)
 library(ggplot2)
 library(plyr)
-library(nortest)
-library(ROCR)
-library(pROC)
 library(gmodels)
 ```
 
@@ -529,7 +526,6 @@ ad.test(test_and_train$Fare)
 
 En tots dos casos el càlcul del p-valor resulta molt inferior al nivell de significació i, per tant, no podem afirmar que els valors de l'atribut *Fare* segueixin una distribució normal.
 
-
 ### 4.2.2. Homoscedasticitat
 
 A continuació estudiarem si la variància de les variables numèriques *Age* i *Fare* és constant als grups de les persones que sobreviuen respecte a les que no ho fan. Com que cap de les dues de les variables té una distribució normal utiltizarem el test Fligner-Killeen. En aquest test la hipòtesi nul·la contempla que les variàncies entre els grups són iguals.
@@ -585,10 +581,17 @@ En aquest apartat ens preguntem si hi ha correlacions entre variables numèrique
 
 ```{r}
 # Correlació entre variables numèriques
-cor(rbind(train[var_num], test[var_num]), method="spearman")
+corr <- cor(rbind(train[var_num], test[var_num]), method="spearman")
+corr
 ```
 
-Com era d'esperar, hi ha una forta correlació entre els atributs *Fare* i *Pclass*; el coeficient de *Spearman* és de -0.83, força proper a -1, que vol dir que a classes més altes (valors més petits) augmenta el preu del bitllet i a l'inversa. A més, també s'aprecia una correlació positiva entre *Group-Parch* (0.64) i *Group-SibSp* (0.61) perquè tots aquests atributs informen de la mida de la família o grup de gent que viatjava conjuntament. Altres correlacions menys importants són *Age-Pclass* (-0,41), classes més altes (valors petits de Pclass) tenen edats més grans, i *SibSp-Parch* (0.43).
+```{r}
+# Representació gràfica de la matriu de correlacions
+library(corrplot)
+corrplot(corr, method="circle")
+```
+
+Com era d'esperar, hi ha una forta correlació entre els atributs *Fare* i *Pclass*; el coeficient de *Spearman* és de -0.83, força proper a -1, que vol dir que per a classes més altes (valors més petits) augmenta el preu del bitllet i a l'inversa. A més, també s'aprecia una correlació positiva entre *Group-Parch* (0.64) i *Group-SibSp* (0.61) perquè tots aquests atributs informen de la mida de la família o grup de gent que viatjava conjuntament. Altres correlacions menys importants són *Age-Pclass* (-0,41), classes més altes (valors petits de Pclass) tenen edats més grans, i *SibSp-Parch* (0.43).
 
 ## 4.4. Contrast d'hipòtesis
 
@@ -613,30 +616,45 @@ Finalment, calcularem la probabilitat de supervivència per als passatgers del c
 
 ### 4.5.1. Creació del model
 
-Per generar el model de regressió logística utilitzarem la funció *regLog* amb totes les variables disponibles, tant les categòriques com les numèriques. Les variables numèriques no requereixen cap tipus de transformació, però les categòriques s'hauran de binaritzar, és a dir, haurem de crear un atribut de tipus binari per a cada categoria; malgrat tot, la funció *regLog* ja realitza aquesta transformació i per tant no serà necessari modificar cap atribut. 
+Per generar el model de regressió logística utilitzarem la funció *regLog* amb totes les variables disponibles, tant les categòriques com les numèriques. Les variables numèriques no requereixen cap tipus de transformació, però les categòriques s'hauran de binaritzar, és a dir, haurem de crear un atribut de tipus binari per a cada categoria; malgrat tot, la funció *regLog* ja realitza aquesta transformació i per tant no serà necessari modificar cap atribut.
+
+Per tal d'avaluar el model generat serà necessari dividir les dades de *train* en un conjunt d'entrenament i un altre de test. Malgrat tot, com que el nombre de dades no és gaire gran utilitzarem la validació creuada o *cross validaton* per poder generar un model a partir de totes les dades. En el nostre cas utilitzarem 4 particions (4-fold).
 
 ```{r}
-# Generem el model de regressió logística
-regLog <- glm(Survived ~ Pclass + Age + SibSp + Parch + Fare + Group + Sex + Cabin + Embarked + Title,
-              data = train, family = binomial(link="logit"))
-regLog$coefficients
+library(caret)
+# Creem les particions de la cross validation
+folds <- trainControl(method = "cv", number=4)
+# Entrenem el model
+regLog <- train(Survived ~ Pclass + Age + SibSp + Parch + Fare + Group + Sex + Cabin + Embarked + Title,
+               data = train, trControl = folds, method = "glm", family = binomial(link="logit"))
+# Mostrem els coeficients
+regLog$finalModel
 ```
-
 
 ### 4.5.2. Avaluació del model
 
-A continuació cerquem el millor llindar per a prendre la decisió de quan sobreviu un individu donada la seva probabilitat.  
+El resultat anterior ens permet obtenir la precisió del model, calculant la precisió sobre cada partició de test i fent la mitjana. El model generat ens dóna una precisió del 0.825, que vol dir que un 82.5% dels registres s'han classificat correctament.
+
+```{r}
+# Mostrem la precisió
+regLog$results['Accuracy']
+```
+
+El model generat ens permet obtenir tant la probabilitat de sobreviure per a cada viatger com realitzar una predicció. A continuació calcularem la probabilitat de supervivència sobre el conjunt *train*, representarem la corba ROC i trobarem el llindar òptim per a determinar la supervivència de cada viatger.
 
 ```{r}
 # Calculem la probabilitat de supervivència dels passatgers del conjunt train
-prob_Survived <- predict(regLog, train, type="response")
+prob_Survived <- predict(regLog, train, type="prob")['1']
+colnames(prob_Survived) <- "prob_Survived"
 y_train <- cbind(train, prob_Survived)
 head(y_train,5)
 ```
 
-Per a obtenir el llindar més adequat de probabilitat observem la corba ROC. 
+Per a obtenir el llindar més adequat de probabilitat representarem la corba ROC.
 
 ```{R}
+library(ROCR)
+library(pROC)
 # Corba ROC del conjunt train
 plot.roc(y_train$Survived, y_train$prob_Survived,  
          main="Confidence interval of a threshold",
@@ -656,13 +674,21 @@ y_train$Survived_pred <- as.factor(y_train$Survived_pred)
 gmodels::CrossTable(y_train$Survived,y_train$Survived_pred)
 ```
 
+A partir dels coeficients normalitzats de la regressió logística obtindrem les variables més significatives. Amb la funció *beta* normalitzem els coeficients i podem veure que Sex, Title, Cabin, Group, Fare i Embarked, són les més significatives. 
+
+```{r}
+library(reghelper)
+beta(regLog)
+```
+
 ### 4.5.3. Predicció del conjunt test
 
 Els coeficients obtinguts són els paràmetres de la funció que modelitza la probabilitat de supervivència per a cada atribut. A partir d'aquests paràmetres podem fer una predicció de la probabilitat de supervivència del conjunt *test* amb la funció *predict*.
 
 ```{r}
 # Calculem la probabilitat de supervivència dels passatgers del conjunt test
-prob_Survived <- predict(regLog, test, type="response")
+prob_Survived <- predict(regLog, test, type="prob")['1']
+colnames(prob_Survived) <- "prob_Survived"
 # Afegim la predicció al conjunt de dades
 solution <- cbind(test, prob_Survived)
 # Assignem com a supervivents els passatgers amb probabilitats superiors al 50%
@@ -676,12 +702,6 @@ head(solution,5)
 
 # 5. Representació de dades
 
-A partir dels coeficients normalitzats de la regressió logística obtindrem les variables més significatives. Amb la funció *beta* normalitzem els coeficients i podem veure que Sex, Title, Cabin, Group, Fare i Embarked, són les més significatives. 
-
-```{r}
-library("reghelper")
-beta(regLog)
-```
 Obtenim una visió general de tot el dataframe de la solució del problema amb un gràfic de conjunts paral·lels. 
 El diagrama mostra clarament que hi ha menys homes que sobreviuen, probablement perquè els primers a evacuar el vaixell foren Dones i nins.  
 També podem veure que un gruix important dels que no sobreviuen no tenen assignat una cabina, probablement viatjaven a les bodegues del vaixell. 
@@ -703,12 +723,12 @@ ggplot(data, aes(x, id = id, split = y, value = value)) +
   geom_parallel_sets_labels(colour = 'white')
 ```
 
-**Piràmide segons *Fare*
-Analitzem el comportament depenent de *Fare. Amb una piràmide, representem les persones que hi sobreviuen a l'esquerra del 0 i els que no ho fan, a la dreta. Al gràfic veiem clarament que el grup de (0,10] és el més nombrós, però no és fàcil veure que percentualment sigui el que té la probabilitat més alta de no sobreviure, de fet, *Fare* és de les variables significatives amb menys pes, en canvi, de nou es veu que el percentatge de dones que hi sobreviuen és més alt que el dels homes, llevat del grup que va pagar (30,40]
+*Piràmide segons Fare*
+
+Analitzem el comportament depenent de *Fare*. Amb una piràmide, representem les persones que hi sobreviuen a l'esquerra del 0 i els que no ho fan, a la dreta. Al gràfic veiem clarament que el grup de (0,10] és el més nombrós, però no és fàcil veure que percentualment sigui el que té la probabilitat més alta de no sobreviure, de fet, *Fare* és de les variables significatives amb menys pes, en canvi, de nou es veu que el percentatge de dones que hi sobreviuen és més alt que el dels homes, llevat del grup que va pagar (30,40]
 
 ```{R}
 library(magrittr)
-
 piramid_solution <- solution[, c("Fare","E_Surv","C_Sex")]
 piramid_solution$Fare <- cut(piramid_solution$Fare, seq(-0,100,by=10))
 piramid_solution <- count(piramid_solution, c("Fare","C_Sex","E_Surv"))
