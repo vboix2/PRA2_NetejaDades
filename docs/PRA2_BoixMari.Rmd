@@ -538,9 +538,8 @@ A continuació estudiarem si la variància de les variables numèriques *Age* i 
 **Age**
 
 ```{r}
-a <- train[train$Survived == 0,"Age"]
-b <- train[train$Survived == 1,"Age"]
-fligner.test(x = list(a,b))
+# Apliquem el test Fligner-Killeen a Age respecte als valors de Survived
+fligner.test(Age ~ Survived, data=train)
 ```
 
 Com el p-valor resultat és més gran que 0.05 no hi ha una justificació per rebutjar la hipòtesi nul·la. Això ens indica que la variància de l'edat és similar en ambdós grups.
@@ -549,9 +548,8 @@ Com el p-valor resultat és més gran que 0.05 no hi ha una justificació per re
 **Fare**
 
 ```{r}
-a <- train[train$Survived == 0,"Fare"]
-b <- train[train$Survived == 1,"Fare"]
-fligner.test(x = list(a,b))
+# Apliquem el test Fligner-Killeen a Fare respecte als valors de Survived
+fligner.test(Fare ~ Survived, data=train)
 ```
 
 Com el p-valor resultat és pràcticament 0, podem rebutjar la hipòtesi nul·la. Això ens indica que la variància de la variable *Fare* és significativament diferent en ambdós grups. Aquest resultat el podem comprovar gràficament mostrant la distribució de valors per a les dues classes en un diagrama de caixa.
@@ -567,7 +565,7 @@ ggplot(data = train, aes(x = Survived, y = Fare, colour = train$Survived)) +
 
 ### 4.2.3. Comparació de les mitjanes d'*Age* i *Fare*
 
-Les variables *Age* i *Fare* presenten una important desviació respecte de la normal i no és possible la seva transformació mitjançant les tècniques habituals (log, sqrt...) pel que emprarem el test no paramètric de Kruskal-Wallis per analitzar la diferència de les seves mitjanes.
+Les variables *Age* i *Fare* presenten una important desviació respecte de la normal, per tant, emprarem el test no paramètric de Kruskal-Wallis per analitzar la diferència de les seves mitjanes.
 En aquest test la hipòtesi nul·la contempla que les distribucions entre els grups són iguals.
 
 ```{r}
@@ -597,7 +595,9 @@ corr
 corrplot(corr, method="circle")
 ```
 
-Com era d'esperar, hi ha una forta correlació entre els atributs *Fare* i *Pclass*; el coeficient de *Spearman* és de -0.83, força proper a -1, que vol dir que per a classes més altes (valors més petits) augmenta el preu del bitllet i a l'inversa. A més, també s'aprecia una correlació positiva entre *Group-Parch* (0.64) i *Group-SibSp* (0.61) perquè tots aquests atributs informen de la mida de la família o grup de gent que viatjava conjuntament. Altres correlacions menys importants són *Age-Pclass* (-0,41), classes més altes (valors petits de Pclass) tenen edats més grans, i *SibSp-Parch* (0.43). A partir d'aquests resultats ens plantejarem la possibilitat d'excloure atributs redundants en el nostre model, com *Pclass* o *Fare*, en funció del nivell de significació que tinguin.
+Com era d'esperar, hi ha una forta correlació entre els atributs *Fare* i *Pclass*; el coeficient de *Spearman* és de -0.83, força proper a -1, que vol dir que per a classes més altes (valors més petits) augmenta el preu del bitllet i a l'inversa. A més, també s'aprecia una correlació positiva entre *Group-Parch* (0.64) i *Group-SibSp* (0.61) perquè tots aquests atributs informen de la mida de la família o grup de gent que viatjava conjuntament. Altres correlacions menys importants són *Age-Pclass* (-0,41), classes més altes (valors petits de Pclass) tenen edats més grans, i *SibSp-Parch* (0.43). 
+
+A partir d'aquests resultats ens plantejarem la possibilitat d'excloure atributs redundants en el nostre model, com *Pclass* o *Fare*, en funció del nivell de significació que tinguin.
 
 ## 4.4. Contrast d'hipòtesis
 
@@ -655,7 +655,7 @@ regLog <- train(Survived ~ Pclass + Age + SibSp + Parch + Cabin + Embarked + Tit
 summary(regLog)
 ```
 
-Com veiem, en aquest nou model hi ha més variables que resulten significatives i també millora la importància de *Embarked*. Si calculem novament la precisió veiem que gairebé no ha variat.
+Com veiem, en aquest nou model hi ha més variables que resulten significatives i també millora la importància d'*Embarked*. Si calculem novament la precisió veiem que gairebé no ha variat.
 
 ```{r}
 # Calculem la precisió del model
@@ -721,8 +721,7 @@ head(solution,5)
 
 Obtenim una visió general de tot el dataframe de la solució del problema amb un gràfic de conjunts paral·lels al que hi mostrem les variables cualitatives amb més probabilitat de ser signiticatives al model. Pclass, SibSp, Parch, Cabin, Embarked, Title
 
-
-El diagrama mostra clarament que hi ha menys homes que sobreviuen, probablement perquè els primers a evacuar el vaixell foren Dones i nins.  
+El diagrama mostra clarament que hi ha menys homes que sobreviuen, probablement perquè els primers a evacuar el vaixell foren dones i nins.  
 També podem veure que un gruix important dels que no sobreviuen no tenen assignat una cabina, probablement viatjaven a les bodegues del vaixell. 
 
 
@@ -755,13 +754,13 @@ ggplot(data, aes(x, id = id, split = y, value = value)) +
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.text.y = element_blank(),
-    axis.text.x = element_text(size = 20, face = "bold"),
+    axis.text.x = element_text(size = 10, face = "bold"),
     axis.title.x  = element_blank()
     )
   
 ```
 
-*Piràmide segons Fare*
+*Piràmide segons Age*
 
 Analitzem el comportament depenent de *Age*. Amb una piràmide, representem les persones que hi sobreviuen a l'esquerra del 0 i els que no ho fan, a la dreta. Al gràfic veiem clarament que el grup de (20,30] és el més nombrós, a més d'apreciar-se clarament que el homes (titol de Mr) són els que no sobreviuràn. Destaquem un petit grup amb titol "Master" (es refereix als nins en anglés) de (0,10] anys al que hi sobreviuen aproximadament la meitat
 
@@ -788,11 +787,15 @@ ggplot(data = piramid_solution, aes(x = Age, y = freq, fill = F_Title)) +
 # 6. Resolució del problema
 
 # 7. Recursos
-Data visualization catalogue. https://datavizcatalogue.com.
-Peter Dalgaard (2008). Introductory statistics with R. Springer Science & Business Media.
-Squire, Megan (2015). Clean Data. Packt Publishing Ltd.
-Calvo M, Subirats L, Pérez D (2019). Introducción a la limpieza y análisis de los datos. Editorial UOC.
 
+* Calvo, M.; Subirats, L.; Pérez, D. (2019). *Introducción a la limpieza y análisis de los datos*. Editorial UOC.
+* Squire, Megan (2015). *Clean Data*. Packt Publishing Ltd.
+* Dalgaard, Peter (2008). *Introductory statistics with R*. Springer Science & Business Media.
+* *Data visualization catalogue*. https://datavizcatalogue.com.
+
+# 8. Taula de contribucions al treball
+
+![Taula de contribucions](TaulaContribucions.png)
 
 
 
