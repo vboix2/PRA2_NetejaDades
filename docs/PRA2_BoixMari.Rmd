@@ -446,7 +446,6 @@ var_num <- c("Pclass","Age","SibSp","Parch","Fare","Group")
 var_cat <- c("Sex","Cabin","Embarked","Title")
 ```
 
-Abans de fer totes aquestes anàlisis comprovarem la normalitat i homocedasticitat de les variables quantitatives.
 
 ## 4.2. Anàlisi de la distribució de variables contínues Age i Fare
 
@@ -579,7 +578,9 @@ kruskal.test(Age  ~ Survived, data = train )
 kruskal.test(Fare  ~ Survived, data = train ) 
 ```
 
-Com podem veure al resultat la distribuició d'edat dels que sobreviuen no és significativament diferent entre els que hi sobreviuen i els que no, al contrari que a la variable *Fare*, si és diferent.
+Com podem veure, el test de Kruskal-Wallis per a l'atribut *Age* ens dóna un p-valor superior a 0.05, per tant, no podem rebutjar la hipòtesi nul·la i hem de considerar que les dues mostres provenen de la mateixa distribució, és a dir, que la mitjana d'edat per a supervivents i no supervivents és la mateixa. A partir d'aquests resultats, ens plantejarem la possibilitat d'excloure aquest atribut del model.
+
+D'altra banda, l'atribut *Fare* ens mostra un p-valor molt petit, això vol dir que podem afirmar que existeix una diferència significativa entre la mitjana del preu del bitllet per a les dues mostres.
 
 ## 4.3. Anàlisi de correlació
 
@@ -596,7 +597,7 @@ corr
 corrplot(corr, method="circle")
 ```
 
-Com era d'esperar, hi ha una forta correlació entre els atributs *Fare* i *Pclass*; el coeficient de *Spearman* és de -0.83, força proper a -1, que vol dir que per a classes més altes (valors més petits) augmenta el preu del bitllet i a l'inversa. A més, també s'aprecia una correlació positiva entre *Group-Parch* (0.64) i *Group-SibSp* (0.61) perquè tots aquests atributs informen de la mida de la família o grup de gent que viatjava conjuntament. Altres correlacions menys importants són *Age-Pclass* (-0,41), classes més altes (valors petits de Pclass) tenen edats més grans, i *SibSp-Parch* (0.43).
+Com era d'esperar, hi ha una forta correlació entre els atributs *Fare* i *Pclass*; el coeficient de *Spearman* és de -0.83, força proper a -1, que vol dir que per a classes més altes (valors més petits) augmenta el preu del bitllet i a l'inversa. A més, també s'aprecia una correlació positiva entre *Group-Parch* (0.64) i *Group-SibSp* (0.61) perquè tots aquests atributs informen de la mida de la família o grup de gent que viatjava conjuntament. Altres correlacions menys importants són *Age-Pclass* (-0,41), classes més altes (valors petits de Pclass) tenen edats més grans, i *SibSp-Parch* (0.43). A partir d'aquests resultats ens plantejarem la possibilitat d'excloure atributs redundants en el nostre model, com *Pclass* o *Fare*, en funció del nivell de significació que tinguin.
 
 ## 4.4. Contrast d'hipòtesis
 
@@ -635,14 +636,33 @@ regLog <- train(Survived ~ Pclass + Age + SibSp + Parch + Fare + Group + Sex + C
 summary(regLog)
 ```
 
-### 4.5.2. Avaluació del model
+El model generat ens dóna una precisió de `r round(regLog$results[1,'Accuracy'], 3)`, que vol dir que més d'un 80% dels registres s'han classificat correctament.
 
-El resultat anterior ens permet obtenir la precisió del model, calculant la precisió sobre cada partició de test i fent la mitjana. El model generat ens dóna una precisió del 0.825, que vol dir que un 82.5% dels registres s'han classificat correctament.
+Si analitzem els coeficients de la regressió i el p-valor calculat per a cada un, veiem que els atributs *Fare*, *Group*, *Sex* i *Embarked* resulten poc rellevants per a la regressió. Això s'explica perquè, sota la hipòtesi nul·la que el coeficient és 0, el seu p-valor és força gran i ens obliga a acceptar-la. En canvi *Age*, a diferència del que ens mostrava el test de Kruskal-Wallis, sí que resulta important per al model. A partir d'aquests resultats tindrem en compte:
+
+* **Fare**. A l'anàlisi de correlació hem vist que hi ha un lligam fort entre *Pclass* i *Fare*, per tant, resulta lògic mantenir *Pclass* a la regressió (molt més rellevant) i excloure *Fare*.
+* **Group**. L'anàlisi de correlació també ens ha mostrat un lligam important de *Group* amb *SibSp* i *Parch*. Com que aquests dos també resulten rellevants per a la regressió optarem per excloure *Group*.
+* **Sex**. Tot i que resulta sorprenent que *Sex* tingui tan poca importància, cal tenir en compte que segurament hi ha redundància de dades amb *TitleMr* i aquest atribut sí que resulta molt significatiu. Per tant, també exclourem *Sex* de la regressió.
+* **Embarked**. La informació d'aquest atribut no la trobem en cap altre variable i el p-valor obtingut no és tant alt com a la resta d'atributs exclosos. En aquest cas optarem per mantenir aquesta variable perquè en el nou model pot ser que prengui més importància. 
+
+A continuació crearem un nou model excloent les variables comentades.
 
 ```{r}
-# Mostrem la precisió
+# Entrenem el model
+regLog <- train(Survived ~ Pclass + Age + SibSp + Parch + Cabin + Embarked + Title,
+               data = train, trControl = folds, method = "glm", family = binomial(link="logit"))
+# Mostrem els coeficients
+summary(regLog)
+```
+
+Com veiem, en aquest nou model hi ha més variables que resulten significatives i també millora la importància de *Embarked*. Si calculem novament la precisió veiem que gairebé no ha variat.
+
+```{r}
+# Calculem la precisió del model
 regLog$results['Accuracy']
 ```
+
+### 4.5.2. Corba ROC
 
 El model generat ens permet obtenir tant la probabilitat de sobreviure per a cada viatger com realitzar una predicció de *Survived*. A continuació calcularem la probabilitat de supervivència sobre el conjunt *train*, representarem la corba ROC i trobarem el llindar òptim per a determinar la supervivència de cada viatger.
 
@@ -704,14 +724,14 @@ El diagrama mostra clarament que hi ha menys homes que sobreviuen, probablement 
 També podem veure que un gruix important dels que no sobreviuen no tenen assignat una cabina, probablement viatjaven a les bodegues del vaixell. 
 
 ```{r}
-names(solution)[names(solution) == "Sex"] <- "C_Sex"
+#names(solution)[names(solution) == "Sex"] <- "C_Sex"
 names(solution)[names(solution) == "Title"] <- "D_Title"
 names(solution)[names(solution) == "Embarked"] <- "B_Embarked"
 names(solution)[names(solution) == "Cabin"] <- "A_Cab"
 names(solution)[names(solution) == "Survived_pred"] <- "E_Surv"
 
 data <- reshape2::melt(solution)
-data <- gather_set_data(data, c("C_Sex", "D_Title", "B_Embarked", "A_Cab" , "E_Surv"))
+data <- gather_set_data(data, c("D_Title", "B_Embarked", "A_Cab" , "E_Surv"))
 
 ggplot(data, aes(x, id = id, split = y, value = value)) +
   geom_parallel_sets(aes(fill = E_Surv), alpha = 0.3, axis.width = 0.1) +
