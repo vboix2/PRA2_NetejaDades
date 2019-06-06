@@ -719,42 +719,65 @@ head(solution,5)
 
 # 5. Representació de dades
 
-Obtenim una visió general de tot el dataframe de la solució del problema amb un gràfic de conjunts paral·lels. 
+Obtenim una visió general de tot el dataframe de la solució del problema amb un gràfic de conjunts paral·lels al que hi mostrem les variables cualitatives amb més probabilitat de ser signiticatives al model. Pclass, SibSp, Parch, Cabin, Embarked, Title
+
+
 El diagrama mostra clarament que hi ha menys homes que sobreviuen, probablement perquè els primers a evacuar el vaixell foren Dones i nins.  
 També podem veure que un gruix important dels que no sobreviuen no tenen assignat una cabina, probablement viatjaven a les bodegues del vaixell. 
 
-```{r}
-#names(solution)[names(solution) == "Sex"] <- "C_Sex"
-names(solution)[names(solution) == "Title"] <- "D_Title"
-names(solution)[names(solution) == "Embarked"] <- "B_Embarked"
-names(solution)[names(solution) == "Cabin"] <- "A_Cab"
-names(solution)[names(solution) == "Survived_pred"] <- "E_Surv"
 
-data <- reshape2::melt(solution)
-data <- gather_set_data(data, c("D_Title", "B_Embarked", "A_Cab" , "E_Surv"))
+```{r}
+solution_temp <-solution
+names(solution_temp)[names(solution_temp) == "Title"] <- "F_Title"
+names(solution_temp)[names(solution_temp) == "SibSp"] <- "C_SibSp"
+names(solution_temp)[names(solution_temp) == "Pclass"] <- "D_Pclass"
+names(solution_temp)[names(solution_temp) == "Survived_pred"] <- "G_Surv"
+#convertim a factors
+solution_temp$F_Title<- as.factor(solution_temp$F_Title)
+solution_temp$C_SibSp<- as.factor(solution_temp$C_SibSp)
+solution_temp$D_Pclass<- as.factor(solution_temp$D_Pclass)
+solution_temp$G_Surv<- as.factor(solution_temp$G_Surv)
+
+
+
+data <- reshape2::melt(solution_temp)
+data <- gather_set_data(data, c("F_Title", "C_SibSp",  "D_Pclass", "G_Surv"))
 
 ggplot(data, aes(x, id = id, split = y, value = value)) +
-  geom_parallel_sets(aes(fill = E_Surv), alpha = 0.3, axis.width = 0.1) +
-  geom_parallel_sets_axes(axis.width = 0.2) +
-  geom_parallel_sets_labels(colour = 'white')
+  geom_parallel_sets(aes(fill = G_Surv), alpha = 0.25, axis.width = 0.2,
+                     n=100, strength = 0.5) +
+  geom_parallel_sets_axes(axis.width = 0.25, fill = "gray95",
+                          color = "gray80", size = 0.15) +
+  geom_parallel_sets_labels(colour = 'black',angle = 0 ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text.y = element_blank(),
+    axis.text.x = element_text(size = 20, face = "bold"),
+    axis.title.x  = element_blank()
+    )
+  
 ```
 
 *Piràmide segons Fare*
 
-Analitzem el comportament depenent de *Fare*. Amb una piràmide, representem les persones que hi sobreviuen a l'esquerra del 0 i els que no ho fan, a la dreta. Al gràfic veiem clarament que el grup de (0,10] és el més nombrós, però no és fàcil veure que percentualment sigui el que té la probabilitat més alta de no sobreviure, de fet, *Fare* és de les variables significatives amb menys pes, en canvi, de nou es veu que el percentatge de dones que hi sobreviuen és més alt que el dels homes, llevat del grup que va pagar (30,40]
+Analitzem el comportament depenent de *Age*. Amb una piràmide, representem les persones que hi sobreviuen a l'esquerra del 0 i els que no ho fan, a la dreta. Al gràfic veiem clarament que el grup de (20,30] és el més nombrós, a més d'apreciar-se clarament que el homes (titol de Mr) són els que no sobreviuràn. Destaquem un petit grup amb titol "Master" (es refereix als nins en anglés) de (0,10] anys al que hi sobreviuen aproximadament la meitat
+
 
 ```{r}
-piramid_solution <- solution[, c("Fare","E_Surv","C_Sex")]
-piramid_solution$Fare <- cut(piramid_solution$Fare, seq(-0,100,by=10))
-piramid_solution <- count(piramid_solution, c("Fare","C_Sex","E_Surv"))
+piramid_solution <- solution_temp[, c("Age","G_Surv","F_Title")]
+piramid_solution$Age <- cut(piramid_solution$Age, seq(-0,100,by=10))
+piramid_solution <- count(piramid_solution, c("Age","G_Surv","F_Title"))
 
 
-ggplot(data = piramid_solution, aes(x = Fare, y = freq, fill = C_Sex )) +
-  #bars for all but 2100
-  geom_bar(data = subset(piramid_solution, E_Surv == 0),
+ggplot(data = piramid_solution, aes(x = Age, y = freq, fill = F_Title)) +
+
+  geom_bar(data = subset(piramid_solution, G_Surv == 0),
            stat = "identity",
            position = "identity") +
-  geom_bar(data = subset(piramid_solution, E_Surv == 1) ,
+  geom_bar(data = subset(piramid_solution, G_Surv == 1) ,
            stat = "identity",
            position = "identity",
            mapping = aes(y = -freq)) +
@@ -765,4 +788,11 @@ ggplot(data = piramid_solution, aes(x = Fare, y = freq, fill = C_Sex )) +
 # 6. Resolució del problema
 
 # 7. Recursos
+Data visualization catalogue. https://datavizcatalogue.com.
+Peter Dalgaard (2008). Introductory statistics with R. Springer Science & Business Media.
+Squire, Megan (2015). Clean Data. Packt Publishing Ltd.
+Calvo M, Subirats L, Pérez D (2019). Introducción a la limpieza y análisis de los datos. Editorial UOC.
+
+
+
 
