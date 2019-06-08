@@ -632,11 +632,13 @@ A L'execució podem veure com el p-valor és inferior al 0.05 en tots els casos,
 
 ```{r}
 # Representació dels supervivents i no supervivents per categories
+layout(matrix(c(1,2,3,4,5,5)))
 par(mfrow=c(2,2))
 for (var in var_cat){
   barplot(table(train[,c("Survived", var)]), main = var, col = c("cadetblue4","aquamarine"))
 }
-legend("topleft", legend=c("No sobreviu","Sobreviu"), fill = c("cadetblue4","aquamarine"))
+plot.new()
+legend("center", ncol=2, legend=c("No sobreviu","Sobreviu"), fill = c("cadetblue4","aquamarine"))
 ```
 
 ## 4.5. Regressió logística
@@ -828,7 +830,7 @@ Per estudiar la importància de les variables categòriques en el valor de *Surv
 
 Finalment, hem construït un model de regressió logística capaç d'efectuar prediccions sobre el valor de la classe *Survived* a partir de tots els atributs. La informació d'aquest model i els resultats de les proves anteriors els hem utilitzat per prescindir d'atributs redundants o poc significatius per al model (*Fare*, *Group* i *Sex*). El model final l'hem construït amb la resta de variables (*Pclass*, *Age*, *SibSp*, *Parch*, *Cabin*, *Embarked* i *Title*), l'hem avaluat amb una validació creuada en 4 particions (4-fold) i ens ha donat una precisió superior al 80%. Aquest model l'hem utilitzat per calcular la probabilitat de sobreviure per als passatgers del conjunt *test* i efectuar una predicció per al valor de *Survived*.
 
-Per acabar, podem avaluar els resultats obtinguts guardant les prediccions de *test* en un fitxer i enviant les dades a *Kaggle*. Si ho fem obtenim una precisió de 0.75598, que vol dir que hem classificat correctament més del 75% dels registres del conjunt *test*.
+Per acabar, podem avaluar els resultats obtinguts guardant les prediccions de *test* en un fitxer (*submission.csv*) i enviant les dades a *Kaggle*. Si ho fem obtenim una precisió de 0.75598, que vol dir que hem classificat correctament més del 75% dels registres del conjunt *test*.
 
 ```{r}
 # Creem un dataframe amb l'identificador del viatger i la nostra predicció
