@@ -424,8 +424,8 @@ Una vegada hem netejat les dades les exportarem en un nou fitxer.
 
 ```{r}
 # Exportació dels conjunt train i test nets
-write.csv(train, '../data/Titanic_train_clean.csv')
-write.csv(test, '../data/Titanic_test_clean.csv')
+write.csv(train, '../data/Titanic_train_clean.csv', row.names = FALSE)
+write.csv(test, '../data/Titanic_test_clean.csv', row.names = FALSE)
 ```
 
 # 4. Anàlisi de dades
@@ -445,7 +445,7 @@ Per a respondre la segona pregunta estudiarem la correlació entre les variables
 
 La tercera pregunta se centra en les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) on avaluarem si hi ha diferències significatives en el percentatge de supervivents entre els diferents grups definits per aquestes variables. Per fer aquesta anàlisi utilitzarem el test de $\chi^2$ amb la funció *chisq.test*, també sobre les dades de *train*.
 
-Finalment, la darrera pregunta és un problema de classificació. Treballarem amb el conjunt *train* per crear un model de regressió logística a partir de totes les variables, tant les numèriques com les categòriques, i  l'utilitzarem per efectuar prediccions sobre el conjunt de *test*.
+Finalment, la darrera pregunta és la més important perquè recull els resultats de les tres anteriors i planteja el problema principal de l'estudi: la creació d'un model predictiu per a la classe *Survived*. Treballarem amb el conjunt *train* per crear un model de regressió logística a partir de totes les variables, tant les numèriques com les categòriques, i l'utilitzarem per efectuar prediccions sobre el conjunt de *test*.
 
 ```{r}
 # Variables numèriques
@@ -456,7 +456,7 @@ var_cat <- c("Sex","Cabin","Embarked","Title")
 ```
 
 
-## 4.2. Anàlisi de la distribució de variables contínues Age i Fare
+## 4.2. Anàlisi de la distribució de variables contínues
 
 Per fer les anàlisis de normalitat i homogeneïtat de la variància ens centrarem en els atributs de tipus *numeric*, que són *Age* i *Fare*. En primer lloc unirem els dos conjunts de dades en un mateix dataframe per facilitar-ne l'estudi.
 
@@ -615,7 +615,7 @@ A partir d'aquests resultats ens plantejarem la possibilitat d'excloure atributs
 
 ## 4.4. Contrast d'hipòtesis
 
-A la tercera pregunta ens qüestionem si les diferents categories de les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) influeixen en la probabilitat de sobreviure. Atès que la variable *Survived* també és qualitativa, emprarem el test *Chi quadrat* amb la hipotesi nul·la que diu que les variables examinades no són independents. Primer calcularem les freqüències de *Survived* per a cada categoria i després aplicarem la funció *chisq.test*.
+A la tercera pregunta ens qüestionem si les diferents categories de les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) influeixen en la probabilitat de sobreviure. Atès que la variable *Survived* també és qualitativa, emprarem el test $\chi^2$ amb la hipotesi nul·la que diu que les variables examinades no són independents. Primer calcularem les freqüències de *Survived* per a cada categoria i després aplicarem la funció *chisq.test*.
 
 ```{r}
 # Test chi quadrat per a totes les variables qualitatives
@@ -636,7 +636,7 @@ par(mfrow=c(2,2))
 for (var in var_cat){
   barplot(table(train[,c("Survived", var)]), main = var, col = c("cadetblue4","aquamarine"))
 }
-legend("topright", legend=c("No sobrevive","Superviviente"), fill = c("cadetblue4","aquamarine"))
+legend("topleft", legend=c("No sobreviu","Sobreviu"), fill = c("cadetblue4","aquamarine"))
 ```
 
 ## 4.5. Regressió logística
@@ -792,7 +792,7 @@ El diagrama mostra clarament que la majoria de no supervivents són homes adults
 
 **Piràmide segons Age**
 
-A continuació estudiarem els resultats en funció del valor de la variable numèrica *Age*. Crearem una piràmide representant les persones que sobreviuen a l'esquerra del 0 i els que no ho fan a la dreta. 
+A continuació estudiarem els resultats en funció del valor de la variable numèrica *Age*. Per fer-ho crearem una piràmide que agrupi els passatgers per edats, representant les persones que sobreviuen a l'esquerra del 0 i els que no ho fan a la dreta. A més, mostrarem en diferents colors la categoria *Title*.
 
 ```{r}
 # Representació de la piràmide en funció d'Age
@@ -814,9 +814,30 @@ ggplot(data = piramid_solution, aes(x = Age, y = freq, fill = F_Title)) +
   scale_y_continuous(labels = abs)
 ```
 
-Al gràfic veiem clarament com l'interval d'edats (20,30] és el més nombrós i també com els homes adults (títol de Mr) són els que majoritàriament no sobreviuen. Destaquem un petit grup amb titol "Master" (es refereix als nens en anglés) de (0,10] anys al que hi sobreviuen aproximadament la meitat
+Al gràfic veiem clarament com l'interval d'edats (20,30] és el més nombrós i també com els homes adults (títol de Mr) són els que majoritàriament no sobreviuen. Destaquem un petit grup amb titol "Master" (es refereix als nens en anglés) de (0,10] anys en què sobreviuen aproximadament la meitat.
 
 # 6. Resolució del problema
+
+A la fase d'anàlisi ens hem plantejat quatre preguntes per tal d'estudiar les dades. Les tres primeres preguntes estaven enfocades a estudiar la distribució de valors i la seva possible importància per a la construcció del model, mentre que la darrera pregunta plantejava l'objectiu real del problema.
+
+Tant la representació gràfica (histograma i gràfica Q-Q) com els test estadístics (Shapiro-Wilk i Anderson-Darling) ens han mostrat que les variables numèriques contínues (*Age* i *Fare*) no segueixen una distribució normal. D'altra banda, si separem les passatgers segons el valor de la classe *Survived*, tant la mitjana com la variància dels valors d'*Age* poden considerar-se d'una mateixa població i, per tant, iguals per als dos grups. En canvi, la mitjana i la variància de *Fare* sí que mostren diferencies significatives en funció del valor de *Survived*. Aquest resultat ens indica que *Fare* pot tenir més importància per construir el model predictiu.
+
+Utilitzant el coeficient de correlació d'Spearman hem obtingut una correlació important entre *Pclass-Fare*, i dues correlacions notables entre *Group-SibSp* i *Group-Parch*. Això ens ha plantejat la possibilitat de prescindir d'alguns d'aquests atributs al model.
+
+Per estudiar la importància de les variables categòriques en el valor de *Survived* hem utilitzat el test *chi quadrat* ($\chi^2$). Els resultats ens han mostrat que hi ha diferències significatives en el nombre de supervivents per a cada categoria; per tant, que les variables categòriques *Sex*, *Cabin*, *Embarked* i *Title* poden resultar importants per al model.
+
+Finalment, hem construït un model de regressió logística capaç d'efectuar prediccions sobre el valor de la classe *Survived* a partir de tots els atributs. La informació d'aquest model i els resultats de les proves anteriors els hem utilitzat per prescindir d'atributs redundants o poc significatius per al model (*Fare*, *Group* i *Sex*). El model final l'hem construït amb la resta de variables (*Pclass*, *Age*, *SibSp*, *Parch*, *Cabin*, *Embarked* i *Title*), l'hem avaluat amb una validació creuada en 4 particions (4-fold) i ens ha donat una precisió superior al 80%. Aquest model l'hem utilitzat per calcular la probabilitat de sobreviure per als passatgers del conjunt *test* i efectuar una predicció per al valor de *Survived*.
+
+Per acabar, podem avaluar els resultats obtinguts guardant les prediccions de *test* en un fitxer i enviant les dades a *Kaggle*. Si ho fem obtenim una precisió de 0.75598, que vol dir que hem classificat correctament més del 75% dels registres del conjunt *test*.
+
+```{r}
+# Creem un dataframe amb l'identificador del viatger i la nostra predicció
+submission <- data.frame(seq(892,1309),solution$Survived_pred)
+# Assignem els noms correctes a les columnes
+colnames(submission) <- c("PassengerId", "Survived")
+# Guardem el dataframe en un fitxer
+write.csv(submission, '../data/submission.csv', row.names = FALSE)
+```
 
 # 7. Recursos
 
@@ -827,7 +848,7 @@ Al gràfic veiem clarament com l'interval d'edats (20,30] és el més nombrós i
 
 # 8. Taula de contribucions al treball
 
-![Taula de contribucions](TaulaContribucions.png)
-
-
+* **Recerca prèvia:** Jesús Marí, Víctor Boix
+* **Redacció de les respostes:** Jesús Marí, Víctor Boix
+* **Desenvolupament del codi:** Jesús Marí, Víctor Boix
 
