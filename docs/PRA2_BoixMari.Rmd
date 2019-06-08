@@ -80,7 +80,7 @@ La resta d'atributs els mantindrem perquè ens donen informació sobre el viatge
 
 ```{r}
 # Primers registres del dataframe train
-head(train)
+head(train, 3)
 ```
 
 # 3. Neteja de les dades
@@ -97,7 +97,7 @@ str(train)
 str(test)
 ```
 
-L'atribut *Name* és de tipus factor, però té tant nivells com registres, per tant el convertirem a character.
+L'atribut *Name* és de tipus factor, però té tant nivells com registres, per tant el convertirem a *character*.
 
 ```{r}
 # Conversió de Name a character
@@ -145,6 +145,8 @@ sapply(train, function(x) nrow(train[x=='',]))
 sapply(test, function(x) nrow(test[x=='',]))
 ```
 
+A continuació analitzarem els atributs que contenen valors NA o buit i els hi assignarem valors utilitzant diferents tècniques.
+
 **Fare**
 
 Per imputar el valor buit del preu del bitllet (*Fare*) podem utilitzar la informació de la classe del viatger (*Pclass*), ja que és lògic pensar que els bitllets de millor classe seran més cars. Això ho podem confirmar mostrant la mitjana de *Fare* per a cada valor de *Pclass*.
@@ -180,12 +182,19 @@ Per imputar els valors buits del port d'embarcament (*Embarked*) podem aprofitar
 train[train$Embarked=='',c("Embarked", "Ticket")]
 ```
 
-Si ampliem la cerca i mostrem el valor d'*Embarked* per a tots els viatgers amb un número de bitllet semblant (113XXX) veiem que la majoria han pujat a Southampton ('S'). Per tant assignarem aquest valor als dos valors buits d'*Embarked*.
+Si ampliem la cerca i mostrem el valor d'*Embarked* per a tots els viatgers amb un número de bitllet semblant (113XXX) veiem que la majoria han pujat a Southampton ('S').
 
 ```{r}
 # Viatgers amb un número de ticket semblant a l'anterior (113XXX) agrupats pel valor d'Embarked
  summary(train[grep("113.*",train$Ticket),"Embarked"])
 
+# Assignem el valor 'S' als valors buits d'Embarked
+levels(train$Embarked) <- c("S", "C", "Q", "S")
+```
+
+Per tant assignarem aquest valor als dos valors buits d'*Embarked*.
+
+```{r}
 # Assignem el valor 'S' als valors buits d'Embarked
 levels(train$Embarked) <- c("S", "C", "Q", "S")
 ```
@@ -477,23 +486,28 @@ ggplot(data = test_and_train, aes(x = Age)) +
 Tot i que la majoria de franges d'edat s'acosten a una distribució normal, l'interval aproximat entre 18 i 25 anys és molt més freqüent que la resta i s'allunya molt d'aquesta distribució. Com veiem a continuació, la gràfica Q-Q segueix la línia de normalitat a la regió central però s'allunya als extrems.
 
 ```{r}
+# Representació de la gràfica Q-Q d'Age
 qqnorm(test_and_train$Age, pch = 19, col = "gray50")
 qqline(test_and_train$Age)
 ```
 
-Per tal d'avaluar la normalitat de la distribució de manera numèrica utilitzarem el contrast d'hipòtesis. En primer lloc farem el test de Shapiro-Wilk. Prenent com a hipòtesi nul·la que la distribució de valors d'*Age* és normal i fixant un nivell de significació del 5%, veiem com el càlcul del p-valor és molt inferior al nivell de significació i ens veiem obligats a rebutjar la hipòtesi nul·la; és a dir, no podem afirmar que la distribució d'*Age* sigui normal.
+Per tal d'avaluar la normalitat de la distribució de manera numèrica utilitzarem el contrast d'hipòtesis. En primer lloc farem el test de Shapiro-Wilk. 
 
 ```{r}
 # Test de normalitat de Shapiro-Wilk
 shapiro.test(test_and_train$Age)
 ```
 
-Com que es tracta d'una mostra relativament gran (|T| > 50), verificarem els resultats amb el test d'Anderson-Darling. Els resultats també ens diuen que no podem considerar que la distribució d'edats segueixi una corba normal.
+Prenent com a hipòtesi nul·la que la distribució de valors d'*Age* és normal i fixant un nivell de significació del 5%, veiem com el càlcul del p-valor és molt inferior al nivell de significació i ens veiem obligats a rebutjar la hipòtesi nul·la; és a dir, no podem afirmar que la distribució d'*Age* sigui normal.
+
+Com que es tracta d'una mostra relativament gran (|T| > 50), verificarem els resultats amb el test d'Anderson-Darling.
 
 ```{r}
 # Test de normalitat d'Anderson-Darling
 ad.test(test_and_train$Age)
 ```
+
+Els resultats també ens diuen que no podem considerar que la distribució d'edats segueixi una corba normal.
 
 **Fare**
 
@@ -513,6 +527,7 @@ ggplot(data = test_and_train, aes(x = Fare)) +
 
 
 ```{r}
+# Representació de la gràfica Q-Q per a Fare
 qqnorm(test_and_train$Fare, pch = 19, col = "gray50")
 qqline(test_and_train$Fare)
 ```
@@ -544,7 +559,6 @@ fligner.test(Age ~ Survived, data=train)
 
 Com el p-valor resultat és més gran que 0.05 no hi ha una justificació per rebutjar la hipòtesi nul·la. Això ens indica que la variància de l'edat és similar en ambdós grups.
 
-
 **Fare**
 
 ```{r}
@@ -552,7 +566,7 @@ Com el p-valor resultat és més gran que 0.05 no hi ha una justificació per re
 fligner.test(Fare ~ Survived, data=train)
 ```
 
-Com el p-valor resultat és pràcticament 0, podem rebutjar la hipòtesi nul·la. Això ens indica que la variància de la variable *Fare* és significativament diferent en ambdós grups. Aquest resultat el podem comprovar gràficament mostrant la distribució de valors per a les dues classes en un diagrama de caixa.
+Com el p-valor resultant és pràcticament 0, podem rebutjar la hipòtesi nul·la. Això ens indica que la variància de la variable *Fare* és significativament diferent en ambdós grups. Aquest resultat el podem comprovar gràficament mostrant la distribució de valors per a les dues classes en un diagrama de caixa.
 
 ```{r}
 # Diagrama de caixa de Fare per a les classes de Survived
@@ -605,16 +619,25 @@ A la tercera pregunta ens qüestionem si les diferents categories de les variabl
 
 ```{r}
 # Test chi quadrat per a totes les variables qualitatives
-for (col in var_cat){
+for (var in var_cat){
   # Creem una taula de freqüències
-  taula = table(train[, c("Survived", col)])
+  taula = table(train[, c("Survived", var)])
   print(taula)
   # Apliquem el test
   print(chisq.test(taula))
 }
 ```
 
-A L'execució podem veure com el p-valor és inferior al 0.05 en tots els casos, per tant, rebutgem la hipòtesi nul·la. Això vol dir que podem afirmar que hi ha diferències significatives entre el nombre de supervivents per a les diferents categories de *Sex*, *Cabin*, *Embarked* i *Title*.
+A L'execució podem veure com el p-valor és inferior al 0.05 en tots els casos, per tant, rebutgem la hipòtesi nul·la. Això vol dir que podem afirmar que hi ha diferències significatives entre el nombre de supervivents per a les diferents categories de *Sex*, *Cabin*, *Embarked* i *Title*. Aquestes diferències es poden apreciar gràficament si mostrem un diagrama de barres per a cada categoria.
+
+```{r}
+# Representació dels supervivents i no supervivents per categories
+par(mfrow=c(2,2))
+for (var in var_cat){
+  barplot(table(train[,c("Survived", var)]), main = var, col = c("cadetblue4","aquamarine"))
+}
+legend("topright", legend=c("No sobrevive","Superviviente"), fill = c("cadetblue4","aquamarine"))
+```
 
 ## 4.5. Regressió logística
 
@@ -638,7 +661,7 @@ summary(regLog)
 
 El model generat ens dóna una precisió de `r round(regLog$results[1,'Accuracy'], 3)`, que vol dir que més d'un 80% dels registres s'han classificat correctament.
 
-Si analitzem els coeficients de la regressió i el p-valor calculat per a cada un, veiem que els atributs *Fare*, *Group*, *Sex* i *Embarked* resulten poc rellevants per a la regressió. Això s'explica perquè, sota la hipòtesi nul·la que el coeficient és 0, el seu p-valor és força gran i ens obliga a acceptar-la. En canvi *Age*, a diferència del que ens mostrava el test de Kruskal-Wallis, sí que resulta important per al model. A partir d'aquests resultats tindrem en compte:
+Si analitzem els coeficients de la regressió i el p-valor calculat per a cada un, veiem que els atributs *Fare*, *Group*, *Sex* i *Embarked* resulten poc rellevants per a la regressió. Això s'explica perquè, sota la hipòtesi nul·la que el coeficient és 0, el seu p-valor és força gran i ens obliga a acceptar-la, que vol dir que podem prescindir d'aquests atributs. En canvi *Age*, a diferència del que ens mostrava el test de Kruskal-Wallis, sí que resulta important per al model. A partir d'aquests resultats tindrem en compte:
 
 * **Fare**. A l'anàlisi de correlació hem vist que hi ha un lligam fort entre *Pclass* i *Fare*, per tant, resulta lògic mantenir *Pclass* a la regressió (molt més rellevant) i excloure *Fare*.
 * **Group**. L'anàlisi de correlació també ens ha mostrat un lligam important de *Group* amb *SibSp* i *Parch*. Com que aquests dos també resulten rellevants per a la regressió optarem per excloure *Group*.
@@ -686,7 +709,7 @@ plot.roc(y_train$Survived, y_train$prob_Survived,
          print.thres="best")
 ```
 
-Assignem el llindar a 0.5 obtingut a la corba.
+Els càlculs mostren que el llindar òptim per a la classe *Survived* és de 0.5; això vol dir que considerarem com a supervivents els passatgers que obtinguin una probabilitat superior a 0.5 segons el model. A partir d'aquest resultat podem fer una predicció del valor de *Survived* i mostrar la matriu de confusió.
 
 ```{r}
 # Assignem com supervivents les probabilitats superiors al 50%
@@ -697,21 +720,30 @@ y_train$Survived_pred <- as.factor(y_train$Survived_pred)
 gmodels::CrossTable(y_train$Survived, y_train$Survived_pred)
 ```
 
+Com veiem, dels 891 registres del conjunt *train*, tenim:
+
+* *Verdaders negatius*: 481 no supervivents s'han classificat correctament.
+* *Falsos positius*: 68 no supervivents s'han classificat com a supervivients.
+* *Falsos negatius*: 75 supervivents s'han classificat com a no supervivents.
+* *Verdaders positius*: 267 supervivents s'han classificat correctament.
+
 
 ### 4.5.3. Predicció del conjunt test
 
-Els coeficients obtinguts són els paràmetres de la funció que modelitza la probabilitat de supervivència per a cada atribut. A partir d'aquests paràmetres podem fer una predicció de la probabilitat de supervivència del conjunt *test* amb la funció *predict*.
+A partir del model de regressió logística generat als apartats anteriors, podem fer una predicció de la probabilitat de supervivència del conjunt *test* amb la funció *predict*.
 
 ```{r}
 # Calculem la probabilitat de supervivència dels passatgers del conjunt test
 prob_Survived <- predict(regLog, test, type="prob")['1']
 colnames(prob_Survived) <- "prob_Survived"
+
 # Afegim la predicció al conjunt de dades
 solution <- cbind(test, prob_Survived)
 # Assignem com a supervivents els passatgers amb probabilitats superiors al 50%
 solution$Survived_pred <- ifelse(solution$prob_Survived>0.5, 1,0)
 # Convertim la predicció a tipus factor
 solution$Survived_pred<-as.factor(solution$Survived_pred)
+
 # Mostrem els resultats per als primers registres
 head(solution,5)
 ```
@@ -719,25 +751,22 @@ head(solution,5)
 
 # 5. Representació de dades
 
-Obtenim una visió general de tot el dataframe de la solució del problema amb un gràfic de conjunts paral·lels al que hi mostrem les variables cualitatives amb més probabilitat de ser signiticatives al model. Pclass, SibSp, Parch, Cabin, Embarked, Title
+En els apartats anteriors hem anat complementant les diferents anàlisis amb gràfiques i taules que ens mostraven els resultats obtinguts. En aquest apartat ens centrarem en representar els resultats de les prediccions sobre el conjunt *test*.
 
-El diagrama mostra clarament que hi ha menys homes que sobreviuen, probablement perquè els primers a evacuar el vaixell foren dones i nins.  
-També podem veure que un gruix important dels que no sobreviuen no tenen assignat una cabina, probablement viatjaven a les bodegues del vaixell. 
+**Gràfic de conjunts paral·lels**
 
+Per tal de tenir una visió general de la solució al problema crearem un gràfic de conjunts paral·lels que mostri les variables enteres i categòriques que han resultat més significatives per al model (*Pclass*, *SibSp* i *Title*) juntament amb la classe *Survived*.
 
 ```{r}
+# Generem un gràfic de conjunts paral·lels
 solution_temp <-solution
 names(solution_temp)[names(solution_temp) == "Title"] <- "F_Title"
 names(solution_temp)[names(solution_temp) == "SibSp"] <- "C_SibSp"
 names(solution_temp)[names(solution_temp) == "Pclass"] <- "D_Pclass"
 names(solution_temp)[names(solution_temp) == "Survived_pred"] <- "G_Surv"
-#convertim a factors
-solution_temp$F_Title<- as.factor(solution_temp$F_Title)
+
 solution_temp$C_SibSp<- as.factor(solution_temp$C_SibSp)
 solution_temp$D_Pclass<- as.factor(solution_temp$D_Pclass)
-solution_temp$G_Surv<- as.factor(solution_temp$G_Surv)
-
-
 
 data <- reshape2::melt(solution_temp)
 data <- gather_set_data(data, c("F_Title", "C_SibSp",  "D_Pclass", "G_Surv"))
@@ -757,15 +786,16 @@ ggplot(data, aes(x, id = id, split = y, value = value)) +
     axis.text.x = element_text(size = 10, face = "bold"),
     axis.title.x  = element_blank()
     )
-  
 ```
 
-*Piràmide segons Age*
+El diagrama mostra clarament que la majoria de no supervivents són homes adults (títol *Mr*), probablement perquè els primers a evacuar el vaixell foren dones i nens. A més, veiem com els pocs *Mr* supervivents són gairebé tots de primera classe. També podem observar com el percentatge de supervivents entre els passatgers de primera classe resulta superior a la resta.
 
-Analitzem el comportament depenent de *Age*. Amb una piràmide, representem les persones que hi sobreviuen a l'esquerra del 0 i els que no ho fan, a la dreta. Al gràfic veiem clarament que el grup de (20,30] és el més nombrós, a més d'apreciar-se clarament que el homes (titol de Mr) són els que no sobreviuràn. Destaquem un petit grup amb titol "Master" (es refereix als nins en anglés) de (0,10] anys al que hi sobreviuen aproximadament la meitat
+**Piràmide segons Age**
 
+A continuació estudiarem els resultats en funció del valor de la variable numèrica *Age*. Crearem una piràmide representant les persones que sobreviuen a l'esquerra del 0 i els que no ho fan a la dreta. 
 
 ```{r}
+# Representació de la piràmide en funció d'Age
 piramid_solution <- solution_temp[, c("Age","G_Surv","F_Title")]
 piramid_solution$Age <- cut(piramid_solution$Age, seq(-0,100,by=10))
 piramid_solution <- count(piramid_solution, c("Age","G_Surv","F_Title"))
@@ -783,6 +813,8 @@ ggplot(data = piramid_solution, aes(x = Age, y = freq, fill = F_Title)) +
         coord_flip() + 
   scale_y_continuous(labels = abs)
 ```
+
+Al gràfic veiem clarament com l'interval d'edats (20,30] és el més nombrós i també com els homes adults (títol de Mr) són els que majoritàriament no sobreviuen. Destaquem un petit grup amb titol "Master" (es refereix als nens en anglés) de (0,10] anys al que hi sobreviuen aproximadament la meitat
 
 # 6. Resolució del problema
 
