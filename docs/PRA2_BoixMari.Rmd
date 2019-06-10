@@ -35,7 +35,7 @@ library(magrittr)
 
 # 1. Descripció del dataset
 
-El dataset utilitzat en aquesta pràctica s'ha obtingut de la pàgina web de *Kaggle*  (https://www.kaggle.com/c/titanic) i conté les dades dels passatgers del Titanic durant el desastre del 1912. L'objectiu d'aquest conjunt de dades és realitzar una predicció sobre la supervivència d'alguns passatgers a partir de les seves característiques. Per tant, es tracta d'un problema de classificació d'aprenentatge supervisat, on cal construir un model capaç de determinar el valor de l'atribut *Survived* (variable objectiu o dependent) a partir de la resta d'atributs (variables independents). 
+El dataset utilitzat en aquesta pràctica s'ha obtingut de la pàgina web de *Kaggle*  (https://www.kaggle.com/c/titanic) i conté les dades dels passatgers del Titanic durant el desastre de 1912. L'objectiu d'aquest conjunt de dades és realitzar una predicció sobre la supervivència d'alguns passatgers a partir de les seves característiques. Per tant, es tracta d'un problema de classificació d'aprenentatge supervisat, on cal construir un model capaç de determinar el valor de l'atribut *Survived* (variable objectiu o dependent) a partir de la resta d'atributs (variables independents). 
 
 Les conjunt de dades està format per dos fitxers CSV:
 
@@ -97,7 +97,7 @@ str(train)
 str(test)
 ```
 
-L'atribut *Name* és de tipus factor, però té tant nivells com registres, per tant el convertirem a *character*.
+L'atribut *Name* és de tipus factor, però té tants nivells com registres, per tant el convertirem a *character*.
 
 ```{r}
 # Conversió de Name a character
@@ -185,7 +185,7 @@ train[train$Embarked=='',c("Embarked", "Ticket")]
 Si ampliem la cerca i mostrem el valor d'*Embarked* per a tots els viatgers amb un número de bitllet semblant (113XXX) veiem que la majoria han pujat a Southampton ('S').
 
 ```{r}
-# Viatgers amb un número de ticket semblant a l'anterior (113XXX) agrupats pel valor d'Embarked
+# Viatgers amb un número de ticket semblant a l'anterior agrupats pel valor d'Embarked
  summary(train[grep("113.*",train$Ticket),"Embarked"])
 
 # Assignem el valor 'S' als valors buits d'Embarked
@@ -635,10 +635,12 @@ A L'execució podem veure com el p-valor és inferior al 0.05 en tots els casos,
 layout(matrix(c(1,2,3,4,5,5)))
 par(mfrow=c(2,2))
 for (var in var_cat){
-  barplot(table(train[,c("Survived", var)]), main = var, col = c("cadetblue4","aquamarine"))
+  barplot(table(train[,c("Survived", var)]), main = var,
+          col = c("cadetblue4","aquamarine"))
 }
 plot.new()
-legend("center", ncol=2, legend=c("No sobreviu","Sobreviu"), fill = c("cadetblue4","aquamarine"))
+legend("center", ncol=2, legend=c("No sobreviu","Sobreviu"),
+       fill = c("cadetblue4","aquamarine"))
 ```
 
 ## 4.5. Regressió logística
@@ -655,8 +657,10 @@ Per tal d'avaluar el model generat serà necessari dividir les dades de *train* 
 # Creem les particions de la cross validation
 folds <- trainControl(method = "cv", number=4)
 # Entrenem el model
-regLog <- train(Survived ~ Pclass + Age + SibSp + Parch + Fare + Group + Sex + Cabin + Embarked + Title,
-               data = train, trControl = folds, method = "glm", family = binomial(link="logit"))
+regLog <- train(Survived ~ Pclass + Age + SibSp + Parch + Fare + Group + Sex +
+                  Cabin + Embarked + Title,
+               data = train, trControl = folds, method = "glm",
+               family = binomial(link="logit"))
 # Mostrem els coeficients
 summary(regLog)
 ```
@@ -675,7 +679,8 @@ A continuació crearem un nou model excloent les variables comentades.
 ```{r}
 # Entrenem el model
 regLog <- train(Survived ~ Pclass + Age + SibSp + Parch + Cabin + Embarked + Title,
-               data = train, trControl = folds, method = "glm", family = binomial(link="logit"))
+               data = train, trControl = folds, method = "glm",
+               family = binomial(link="logit"))
 # Mostrem els coeficients
 summary(regLog)
 ```
@@ -755,6 +760,20 @@ head(solution,5)
 
 En els apartats anteriors hem anat complementant les diferents anàlisis amb gràfiques i taules que ens mostraven els resultats obtinguts. En aquest apartat ens centrarem en representar els resultats de les prediccions sobre el conjunt *test*.
 
+**Diagrama de sectors**
+
+Podem representar el resultat total de supervivents i no supervivents amb un diagrama de sectors.
+
+```{r}
+# Diagrama de sectors de Survived
+taula <- data.frame(table(solution$Survived_pred))
+colnames(taula) <- c("Survived", "value")
+
+ggplot(taula, aes(x="", y=value, fill=Survived)) +
+  geom_bar(width = 1, stat = "identity") +
+  coord_polar("y", start=0)
+```
+
 **Gràfic de conjunts paral·lels**
 
 Per tal de tenir una visió general de la solució al problema crearem un gràfic de conjunts paral·lels que mostri les variables enteres i categòriques que han resultat més significatives per al model (*Pclass*, *SibSp* i *Title*) juntament amb la classe *Survived*.
@@ -792,6 +811,28 @@ ggplot(data, aes(x, id = id, split = y, value = value)) +
 
 El diagrama mostra clarament que la majoria de no supervivents són homes adults (títol *Mr*), probablement perquè els primers a evacuar el vaixell foren dones i nens. A més, veiem com els pocs *Mr* supervivents són gairebé tots de primera classe. També podem observar com el percentatge de supervivents entre els passatgers de primera classe resulta superior a la resta.
 
+**Diagrama de barres**
+
+Per observar les diferències entre la resta de variables categòriques (*Cabin* i *Embarked*) podem fer un diagrama de barres.
+
+```{r}
+# Diagrama de barres de Cabin
+taula <- melt(solution[,c("Survived_pred", "Cabin")])
+ggplot(solution, aes(x=Cabin, y=Survived_pred, fill=Survived_pred)) +
+    geom_bar(stat="identity")
+```
+
+Com veiem, hi ha una diferència important entre els viatgers que no tenen cabina i la resta.
+
+```{r}
+# Diagrama de barres d'Embarked
+taula <- melt(solution[,c("Survived_pred", "Embarked")])
+ggplot(solution, aes(x=Embarked, y=Survived_pred, fill=Survived_pred)) +
+    geom_bar(stat="identity")
+```
+
+En aquest cas veiem que la probabilitat de sobreviure és inferior entre el passatgers embarcats a Southampton.
+
 **Piràmide segons Age**
 
 A continuació estudiarem els resultats en funció del valor de la variable numèrica *Age*. Per fer-ho crearem una piràmide que agrupi els passatgers per edats, representant les persones que sobreviuen a l'esquerra del 0 i els que no ho fan a la dreta. A més, mostrarem en diferents colors la categoria *Title*.
@@ -818,9 +859,10 @@ ggplot(data = piramid_solution, aes(x = Age, y = freq, fill = F_Title)) +
 
 Al gràfic veiem clarament com l'interval d'edats (20,30] és el més nombrós i també com els homes adults (títol de Mr) són els que majoritàriament no sobreviuen. Destaquem un petit grup amb titol "Master" (es refereix als nens en anglés) de (0,10] anys en què sobreviuen aproximadament la meitat.
 
+
 # 6. Resolució del problema
 
-A la fase d'anàlisi ens hem plantejat quatre preguntes per tal d'estudiar les dades. Les tres primeres preguntes estaven enfocades a estudiar la distribució de valors i la seva possible importància per a la construcció del model, mentre que la darrera pregunta plantejava l'objectiu real del problema.
+A la fase d'anàlisi ens hem plantejat quatre preguntes per tal d'estudiar les dades. Les tres primeres preguntes estaven enfocades a estudiar la distribució de valors i la seva possible importància per a la construcció del model, mentre que la darrera pregunta plantejava l'objectiu final del problema.
 
 Tant la representació gràfica (histograma i gràfica Q-Q) com els test estadístics (Shapiro-Wilk i Anderson-Darling) ens han mostrat que les variables numèriques contínues (*Age* i *Fare*) no segueixen una distribució normal. D'altra banda, si separem les passatgers segons el valor de la classe *Survived*, tant la mitjana com la variància dels valors d'*Age* poden considerar-se d'una mateixa població i, per tant, iguals per als dos grups. En canvi, la mitjana i la variància de *Fare* sí que mostren diferencies significatives en funció del valor de *Survived*. Aquest resultat ens indica que *Fare* pot tenir més importància per construir el model predictiu.
 
