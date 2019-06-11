@@ -8,7 +8,8 @@ Jesús Marí i Víctor Boix
 
 ## Descripció
 
-El dataset utilitzat en aquesta pràctica s'ha obtingut de la pàgina web de Kaggle (https://www.kaggle.com/c/titanic) i conté les dades dels passatgers del Titanic durant el desastre del 1912. L'objectiu de la pràctica és realitzar una predicció sobre la supervivència d'alguns passatgers a partir de les seves característiques. Per tant, es tracta d'un problema de classificació d'aprenentatge supervisat, on cal construir un model capaç de determinar el valor de l'atribut *Survived* (variable objectiu o dependent) a partir de la resta d'atributs (variables independents).
+L'objectiu d'aquesta pràctica és construir un model capaç de realitzar prediccions sobre la supervivència dels passatgers del Titanic a partir de les seves característiques. Per tant, es tracta d'un problema de classificació d'aprenentatge supervisat, on cal construir un model capaç de determinar el valor de l'atribut *Survived* (variable objectiu o dependent) a partir de la resta d'atributs (variables independents).
+El dataset utilitzat s'ha obtingut de la pàgina web de Kaggle (https://www.kaggle.com/c/titanic) i conté les dades dels passatgers del Titanic durant el desastre del 1912. 
 
 ## Fitxers
 

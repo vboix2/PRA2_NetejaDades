@@ -187,9 +187,6 @@ Si ampliem la cerca i mostrem el valor d'*Embarked* per a tots els viatgers amb 
 ```{r}
 # Viatgers amb un número de ticket semblant a l'anterior agrupats pel valor d'Embarked
  summary(train[grep("113.*",train$Ticket),"Embarked"])
-
-# Assignem el valor 'S' als valors buits d'Embarked
-levels(train$Embarked) <- c("S", "C", "Q", "S")
 ```
 
 Per tant assignarem aquest valor als dos valors buits d'*Embarked*.
@@ -439,11 +436,11 @@ La fase d'anàlisi s'enfocarà en estudiar les dades des de diferents punts de v
 3. La probabilitat de sobreviure és significativament diferent entre les diferents categories?
 4. Quina és la probabilitat de sobreviure per als passatgers del conjunt de test?
 
-La primera pregunta estudia la distribució de les variables numèriques contínues (*Age* i *Fare*). Començarem estudiant si els seus valors segueixen una distribució normal, a continuació compararem la variància en funció del valors de la classe (*Survived*) i, finalment, aprofitarem aquest resultat per comparar la mitjana de valors en funció del valor de la classe (*Survived*). Això ens permetrà saber si la mitjana d'edat i del preu del bitllet són significativament diferents entre els supervivents i els no supervivents.
+La primera pregunta estudia la distribució de les variables numèriques contínues (*Age* i *Fare*). Començarem estudiant si els seus valors segueixen una distribució normal, a continuació compararem la variància en funció del valors de la classe (*Survived*) i, finalment, aprofitarem aquest resultat per comparar la mitjana de valors en funció del valor de *Survived*. Això ens permetrà saber si la mitjana d'edat i del preu del bitllet són significativament diferents entre els supervivents i els no supervivents.
 
 Per a respondre la segona pregunta estudiarem la correlació entre les variables quantitatives (*Pclass*, *Age*, *SibSp*, *Parch*, *Fare* i *Group*). En principi es tracta de les variables independents del conjunt de dades, per aquest motiu, si detectem alguna dependència important significarà que hi ha redundància en les dades i pot ser necessari eliminar alguna columna. Per fer aquesta anàlisi treballarem amb els dos conjunts de dades: *train* i *test*.
 
-La tercera pregunta se centra en les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) on avaluarem si hi ha diferències significatives en el percentatge de supervivents entre els diferents grups definits per aquestes variables. Per fer aquesta anàlisi utilitzarem el test de $\chi^2$ amb la funció *chisq.test*, també sobre les dades de *train*.
+La tercera pregunta se centra en les variables qualitatives (*Sex*, *Cabin*, *Embarked* i *Title*) on avaluarem si hi ha diferències significatives en el percentatge de supervivents entre els diferents grups definits per aquestes variables. Per fer aquesta anàlisi utilitzarem el test de $\chi^2$ amb la funció *chisq.test* sobre les dades de *train*.
 
 Finalment, la darrera pregunta és la més important perquè recull els resultats de les tres anteriors i planteja el problema principal de l'estudi: la creació d'un model predictiu per a la classe *Survived*. Treballarem amb el conjunt *train* per crear un model de regressió logística a partir de totes les variables, tant les numèriques com les categòriques, i l'utilitzarem per efectuar prediccions sobre el conjunt de *test*.
 
@@ -498,7 +495,7 @@ Per tal d'avaluar la normalitat de la distribució de manera numèrica utilitzar
 shapiro.test(test_and_train$Age)
 ```
 
-Prenent com a hipòtesi nul·la que la distribució de valors d'*Age* és normal i fixant un nivell de significació del 5%, veiem com el càlcul del p-valor és molt inferior al nivell de significació i ens veiem obligats a rebutjar la hipòtesi nul·la; és a dir, no podem afirmar que la distribució d'*Age* sigui normal.
+Prenent com a hipòtesi nul·la que la distribució de valors d'*Age* és normal i fixant un nivell de significació del 5%, veiem com el càlcul del p-valor és molt inferior al nivell de significació i, per tant, ens veiem obligats a rebutjar la hipòtesi nul·la; és a dir, no podem afirmar que la distribució d'*Age* sigui normal.
 
 Com que es tracta d'una mostra relativament gran (|T| > 50), verificarem els resultats amb el test d'Anderson-Darling.
 
